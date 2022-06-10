@@ -5,7 +5,7 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=18:antialias=true:autohint=true";
+static char *font = "Liberation Mono:pixelsize=16:antialias=true:autohint=true";
 static int borderpx = 2;
 
 /*
@@ -94,7 +94,9 @@ char *termname = "st-256color";
 unsigned int tabspaces = 4;
 
 /* bg opacity */
-float alpha = 0.64, alphaUnfocused = 0.48;
+/* float alpha = 0.72, alphaUnfocused = 0.64; */
+/* float alpha = 0.64, alphaUnfocused = 0.40; */
+float alpha = 0.84, alphaUnfocused = 0.72;
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
@@ -131,26 +133,23 @@ static const char *colorname[] = {
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 7;
+unsigned int defaultfg = 2;
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 256;
+unsigned int defaultcs = 11; // cursor color
 static unsigned int defaultrcs = 257;
-unsigned int bg = 0, bgUnfocused = 0;                                                                                                    // st-focus
-
-unsigned int const currentBg = 6, buffSize = 2048;                                                                                       // st-meta-vim-full
-/// Enable double / triple click yanking / selection of word / line.                                                                     // st-meta-vim-full
-int const mouseYank = 1, mouseSelect = 1;                                                                                                // st-meta-vim-full
-/// [Vim Browse] Colors for search results currently on screen.                                                                          // st-meta-vim-full
-unsigned int const highlightBg = 10, highlightFg = 0;                                                                                    // st-meta-vim-full
-char const wDelS[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", wDelL[] = " \t";                                                               // st-meta-vim-full
-char *nmKeys [] = {              ///< Shortcusts executed in normal mode                                                                 // st-meta-vim-full
-  "R/Building\nN", "r/Building\n", "X/juli@machine\nN", "x/juli@machine\n",                                                              // st-meta-vim-full
-  "Q?[Leaving vim, starting execution]\n","F/: error:\nN", "f/: error:\n", "DQf"                                                         // st-meta-vim-full
-};                                                                                                                                       // st-meta-vim-full
-unsigned int const amountNmKeys = sizeof(nmKeys) / sizeof(*nmKeys);                                                                      // st-meta-vim-full
-/// Style of the {command, search} string shown in the right corner (y,v,V,/)                                                            // st-meta-vim-full
-Glyph styleSearch = {' ', ATTR_ITALIC | ATTR_BOLD_FAINT, 7, 16};                                                                         // st-meta-vim-full
-Glyph style[] = {{' ',ATTR_ITALIC|ATTR_FAINT,15,16}, {' ',ATTR_ITALIC,232,11}, {' ', ATTR_ITALIC, 232, 4}, {' ', ATTR_ITALIC, 232, 12}}; // st-meta-vim-full
+unsigned int bg = 0, bgUnfocused = 0;                                                                                                                                           // st-focus
+unsigned int const currentBg = 6, buffSize = 2048;                                                                                                                              // st -meta-vim-full
+/// Enable double / triple click yanking / selection of word / line.                                                                                                            // st -meta-vim-full
+int const mouseYank = 1, mouseSelect = 1;                                                                                                                                       // st -meta-vim-full
+/// [Vim Browse] Colors for search results currently on screen.                                                                                                                 // st -meta-vim-full
+unsigned int const highlightBg = 10, highlightFg = 0;                                                                                                                           // st -meta-vim-full
+char const wDelS[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", wDelL[] = " \t";                                                                                                      // st -meta-vim-full
+ //< Shortcusts executed in normal mode                                                                                                                                         // st -meta-vim-full
+char *nmKeys [] = { "R/Building\nN", "r/Building\n", "X/juli@machine\nN", "x/juli@machine\n", "Q?[Leaving vim, starting execution]\n","F/: error:\nN", "f/: error:\n", "DQf" }; // st -meta-vim-full
+unsigned int const amountNmKeys = sizeof(nmKeys) / sizeof(*nmKeys);                                                                                                             // st -meta-vim-full
+/// Style of the {command, search} string shown in the right corner (y,v,V,/)                                                                                                   // st -meta-vim-full
+Glyph styleSearch = {' ', ATTR_ITALIC | ATTR_BOLD_FAINT, 7, 16};                                                                                                                // st -meta-vim-full
+Glyph style[] = {{' ',ATTR_ITALIC|ATTR_FAINT,15,16}, {' ',ATTR_ITALIC,232,11}, {' ', ATTR_ITALIC, 232, 4}, {' ', ATTR_ITALIC, 232, 12}};                                        // st -meta-vim-full
 
 /*
  * Default shape of cursor
@@ -159,7 +158,7 @@ Glyph style[] = {{' ',ATTR_ITALIC|ATTR_FAINT,15,16}, {' ',ATTR_ITALIC,232,11}, {
  * 6: Bar ("|")
  * 7: Snowman ("☃")
  */
-static unsigned int cursorshape = 2;
+static unsigned int cursorshape = 4;
 
 /*
  * Default columns and rows numbers
