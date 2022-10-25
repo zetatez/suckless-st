@@ -1931,7 +1931,7 @@ void
 kpress(XEvent *ev)
 {
 	XKeyEvent *e = &ev->xkey;
-	KeySym ksym;
+	KeySym ksym = NoSymbol;
 	char buf[64], *customkey;
 	int len;
 	Rune c;
@@ -1941,15 +1941,18 @@ kpress(XEvent *ev)
 	if (IS_SET(MODE_KBDLOCK))
 		return;
 
-	if (xw.ime.xic)
+	if (xw.ime.xic) {
 		len = XmbLookupString(xw.ime.xic, e, buf, sizeof buf, &ksym, &status);
-	else
+		if (status == XBufferOverflow)
+			return;
+	} else {
 		len = XLookupString(e, buf, sizeof buf, &ksym, NULL);
-	if (IS_SET(MODE_NORMAL)) {                                                             // st-meta-vim-full
-		if (kPressHist(buf, len, match(ControlMask, e->state), &ksym)                      // st-meta-vim-full
-		                                      == finish) normalMode();                     // st-meta-vim-full
-		return;                                                                            // st-meta-vim-full
-	}                                                                                      // st-meta-vim-full
+	}
+	if (IS_SET(MODE_NORMAL)) {                                       // st-meta-vim-full
+		if (kPressHist(buf, len, match(ControlMask, e->state), &ksym)  // st-meta-vim-full
+		                                      == finish) normalMode(); // st-meta-vim-full
+		return;                                                        // st-meta-vim-full
+	}                                                                // st-meta-vim-full
 	/* 1. shortcuts */
 	for (bp = shortcuts; bp < shortcuts + LEN(shortcuts); bp++) {
 		if (ksym == bp->keysym && match(bp->mod, e->state)) {
