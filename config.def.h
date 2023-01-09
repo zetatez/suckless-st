@@ -136,7 +136,8 @@ static const char *colorname[] = {
  */
 unsigned int defaultfg = 2;
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 11; // cursor color
+// unsigned int defaultcs = 11; // cursor color
+unsigned int defaultcs = 10; // cursor color
 static unsigned int defaultrcs = 257;
 unsigned int bg = 0, bgUnfocused = 0;                                                                                                                                           // st-focus
 unsigned int const currentBg = 6, buffSize = 2048;                                                                                                                              // st -meta-vim-full
