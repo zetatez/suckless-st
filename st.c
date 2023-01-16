@@ -431,116 +431,116 @@ tlinelen(int y)
 	return i;
 }
 
-void historyOpToggle(int start, int paint) {                                                           // st-meta-vim-full
-	if ((!histOp == !(histOp + start)) && ((histOp += start) || 1)) return;                            // st-meta-vim-full
-	if (histMode && paint && (!IS_SET(MODE_ALTSCREEN) || altToggle)) draw();                           // st-meta-vim-full
-	tcursor(CURSOR_SAVE);                                                                              // st-meta-vim-full
-	histOp += start;                                                                                   // st-meta-vim-full
-	if (histMode && altToggle) {                                                                       // st-meta-vim-full
-		tswapscreen();                                                                                 // st-meta-vim-full
-		memset(term.dirty,0,sizeof(*term.dirty)*term.row);                                             // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-	tcursor(CURSOR_LOAD);                                                                              // st-meta-vim-full
-	*(!IS_SET(MODE_ALTSCREEN)?&term.line:&term.alt)=&buf[histOp?histOff:insertOff];                    // st-meta-vim-full
-}                                                                                                      // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-void historyModeToggle(int start) {                                                                    // st-meta-vim-full
-	if (!(histMode = (histOp = !!start))) {                                                            // st-meta-vim-full
-		selnormalize();                                                                                // st-meta-vim-full
-		tfulldirt();                                                                                   // st-meta-vim-full
-	} else {                                                                                           // st-meta-vim-full
-		tcursor(CURSOR_SAVE);                                                                          // st-meta-vim-full
-		histOp = 0;                                                                                    // st-meta-vim-full
-		histOff = insertOff;                                                                           // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-}                                                                                                      // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-int historyBufferScroll(int n) {                                                                       // st-meta-vim-full
-	if (IS_SET(MODE_ALTSCREEN) || !n) return histOp;                                                   // st-meta-vim-full
-	int p=abs(n=(n<0) ? max(n,-term.row) : min(n,term.row)), r=term.row-p,                             // st-meta-vim-full
-	          s=sizeof(*term.dirty), *ptr=histOp?&histOff:&insertOff;                                  // st-meta-vim-full
-	if (!histMode || histOp) tfulldirt(); else {                                                       // st-meta-vim-full
-		memmove(&term.dirty[-min(n,0)], &term.dirty[max(n,0)], s*r);                                   // st-meta-vim-full
-		memset(&term.dirty[n>0 ? r : 0], 0, s * p);                                                    // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-	term.line = &buf[*ptr = (buffSize+*ptr+n) % buffSize];                                             // st-meta-vim-full
-	// Cut part of selection removed from buffer, and update sel.ne/b.                                 // st-meta-vim-full
-	int const prevOffBuf = sel.alt ? 0 : insertOff + term.row;                                         // st-meta-vim-full
-	if (sel.ob.x != -1 && !histOp && n) {                                                              // st-meta-vim-full
-		int const offBuf = sel.alt ? 0 : insertOff + term.row,                                         // st-meta-vim-full
-		          pb = rangeY(sel.ob.y - prevOffBuf),                                                  // st-meta-vim-full
-		          pe = rangeY(sel.oe.y - prevOffBuf);                                                  // st-meta-vim-full
-		int const b = rangeY(sel.ob.y - offBuf), nln = n < 0,                                          // st-meta-vim-full
-		          e = rangeY(sel.oe.y - offBuf), last = offBuf - nln;                                  // st-meta-vim-full
-		if (pb != b && ((pb < b) != nln)) sel.ob.y = last;                                             // st-meta-vim-full
-		if (pe != e && ((pe < e) != nln)) sel.oe.y = last;                                             // st-meta-vim-full
-		if (sel.oe.y == last && sel.ob.y == last) selclear();                                          // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-	selnormalize();                                                                                    // st-meta-vim-full
-  // Clear the new region exposed by the shift.                                                        // st-meta-vim-full
-	if (!histOp) tclearregion(0, n>0?r+1:0, buffCols-1, n>0?term.row:p-1);                             // st-meta-vim-full
-	return 1;                                                                                          // st-meta-vim-full
-}                                                                                                      // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-int historyMove(int x, int y, int ly) {                                                                // st-meta-vim-full
-	historyOpToggle(1, 1);                                                                             // st-meta-vim-full
-	y += ((term.c.x += x) < 0 ?term.c.x-term.col :term.c.x) / term.col;//< x                           // st-meta-vim-full
-	if ((term.c.x %= term.col) < 0) term.c.x += term.col;                                              // st-meta-vim-full
-	if ((term.c.y += y) >= term.row) ly += term.c.y - term.row + 1;    //< y                           // st-meta-vim-full
-	else if (term.c.y < 0) ly += term.c.y;                                                             // st-meta-vim-full
-	term.c.y = MIN(MAX(term.c.y, 0), term.row - 1);                                                    // st-meta-vim-full
-	// Check if scroll is necessary / arrived at top / bottom of terminal history                      // st-meta-vim-full
-	int t = 0, b = 0, finTop = ly < 0, finBot = ly > 0;                                                // st-meta-vim-full
-	if (!IS_SET(MODE_ALTSCREEN)) {                                                                     // st-meta-vim-full
-		b=rangeY(insertOff-histOff), t=-rangeY(-term.row-(insertOff-histOff));                         // st-meta-vim-full
-		finBot = ly > b, finTop=histMode&&((-ly>-t));                                                  // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-	if ((finTop || finBot) && (x||y)) term.c.x = finBot ? term.col-1 : 0;                              // st-meta-vim-full
-	historyBufferScroll(finBot ? b : (finTop ? t : ly));                                               // st-meta-vim-full
-	historyOpToggle(-1, 1);                                                                            // st-meta-vim-full
-	return finTop || finBot;                                                                           // st-meta-vim-full
-}                                                                                                      // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-#include "normalMode.c"                                                                                // st-meta-vim-full
-void selnormalize(void) {                                                                              // st-meta-vim-full
-	historyOpToggle(1, 1);                                                                             // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-	int const oldb = sel.nb.y, olde = sel.ne.y;                                                        // st-meta-vim-full
-	if (sel.ob.x == -1) {                                                                              // st-meta-vim-full
-		sel.ne.y = sel.nb.y = -1;                                                                      // st-meta-vim-full
-	} else {                                                                                           // st-meta-vim-full
-		int const offsetBuffer = sel.alt ? 0 : insertOff + term.row;                                   // st-meta-vim-full
-		int const off = sel.alt ? 0 : (histMode ? histOff : insertOff);                                // st-meta-vim-full
-		int const nby = rangeY(sel.ob.y - off),                                                        // st-meta-vim-full
-		          ney = rangeY(sel.oe.y - off);                                                        // st-meta-vim-full
-		sel.swap = rangeY(sel.ob.y - offsetBuffer)                                                     // st-meta-vim-full
-		         > rangeY(sel.oe.y - offsetBuffer);                                                    // st-meta-vim-full
-		sel.nb.y = sel.swap ? ney : nby;                                                               // st-meta-vim-full
-		sel.ne.y = !sel.swap ? ney : nby;                                                              // st-meta-vim-full
-		int const cnb = sel.nb.y < term.row, cne = sel.ne.y < term.row;                                // st-meta-vim-full
-		if (sel.type == SEL_REGULAR && sel.ob.y != sel.oe.y) {                                         // st-meta-vim-full
-			if (cnb) sel.nb.x = (!sel.swap) ? sel.ob.x : sel.oe.x;                                     // st-meta-vim-full
-			if (cne) sel.ne.x = (!sel.swap) ? sel.oe.x : sel.ob.x;                                     // st-meta-vim-full
-		} else {                                                                                       // st-meta-vim-full
-			if (cnb) sel.nb.x = MIN(sel.ob.x, sel.oe.x);                                               // st-meta-vim-full
-			if (cne) sel.ne.x = MAX(sel.ob.x, sel.oe.x);                                               // st-meta-vim-full
-		}                                                                                              // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-	int const nBet=sel.nb.y<=sel.ne.y, oBet=oldb<=olde;                                                // st-meta-vim-full
-	for (int i = 0; i < term.row; ++i) {                                                               // st-meta-vim-full
-		int const n = nBet ? BETWEEN(i, sel.nb.y, sel.ne.y)                                            // st-meta-vim-full
-		                   : OUT(i, sel.nb.y, sel.ne.y);                                               // st-meta-vim-full
-		term.dirty[i] |= (sel.type == SEL_RECTANGULAR && n) ||                                         // st-meta-vim-full
-		        (n != (oBet ? BETWEEN(i,oldb,olde) : OUT(i,oldb,olde)));                               // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-	}                                                                                                  // st-meta-vim-full
-	if (BETWEEN(oldb, 0, term.row - 1)) term.dirty[oldb] = 1;                                          // st-meta-vim-full
-	if (BETWEEN(olde, 0, term.row - 1)) term.dirty[olde] = 1;                                          // st-meta-vim-full
-	if (BETWEEN(sel.nb.y, 0, term.row - 1)) term.dirty[sel.nb.y] = 1;                                  // st-meta-vim-full
-	if (BETWEEN(sel.ne.y, 0, term.row - 1)) term.dirty[sel.ne.y] = 1;                                  // st-meta-vim-full
-                                                                                                       // st-meta-vim-full
-	historyOpToggle(-1, 1);                                                                            // st-meta-vim-full
-}                                                                                                      // st-meta-vim-full
+void historyOpToggle(int start, int paint) {                                                             // st-meta-vim-full
+	if ((!histOp == !(histOp + start)) && ((histOp += start) || 1)) return;                                // st-meta-vim-full
+	if (histMode && paint && (!IS_SET(MODE_ALTSCREEN) || altToggle)) draw();                               // st-meta-vim-full
+	tcursor(CURSOR_SAVE);                                                                                  // st-meta-vim-full
+	histOp += start;                                                                                       // st-meta-vim-full
+	if (histMode && altToggle) {                                                                           // st-meta-vim-full
+		tswapscreen();                                                                                       // st-meta-vim-full
+		memset(term.dirty,0,sizeof(*term.dirty)*term.row);                                                   // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+	tcursor(CURSOR_LOAD);                                                                                  // st-meta-vim-full
+	*(!IS_SET(MODE_ALTSCREEN)?&term.line:&term.alt)=&buf[histOp?histOff:insertOff];                        // st-meta-vim-full
+}                                                                                                        // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+void historyModeToggle(int start) {                                                                      // st-meta-vim-full
+	if (!(histMode = (histOp = !!start))) {                                                                // st-meta-vim-full
+		selnormalize();                                                                                      // st-meta-vim-full
+		tfulldirt();                                                                                         // st-meta-vim-full
+	} else {                                                                                               // st-meta-vim-full
+		tcursor(CURSOR_SAVE);                                                                                // st-meta-vim-full
+		histOp = 0;                                                                                          // st-meta-vim-full
+		histOff = insertOff;                                                                                 // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+}                                                                                                        // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+int historyBufferScroll(int n) {                                                                         // st-meta-vim-full
+	if (IS_SET(MODE_ALTSCREEN) || !n) return histOp;                                                       // st-meta-vim-full
+	int p=abs(n=(n<0) ? max(n,-term.row) : min(n,term.row)), r=term.row-p,                                 // st-meta-vim-full
+	          s=sizeof(*term.dirty), *ptr=histOp?&histOff:&insertOff;                                      // st-meta-vim-full
+	if (!histMode || histOp) tfulldirt(); else {                                                           // st-meta-vim-full
+		memmove(&term.dirty[-min(n,0)], &term.dirty[max(n,0)], s*r);                                         // st-meta-vim-full
+		memset(&term.dirty[n>0 ? r : 0], 0, s * p);                                                          // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+	term.line = &buf[*ptr = (buffSize+*ptr+n) % buffSize];                                                 // st-meta-vim-full
+	// Cut part of selection removed from buffer, and update sel.ne/b.                                     // st-meta-vim-full
+	int const prevOffBuf = sel.alt ? 0 : insertOff + term.row;                                             // st-meta-vim-full
+	if (sel.ob.x != -1 && !histOp && n) {                                                                  // st-meta-vim-full
+		int const offBuf = sel.alt ? 0 : insertOff + term.row,                                               // st-meta-vim-full
+		          pb = rangeY(sel.ob.y - prevOffBuf),                                                        // st-meta-vim-full
+		          pe = rangeY(sel.oe.y - prevOffBuf);                                                        // st-meta-vim-full
+		int const b = rangeY(sel.ob.y - offBuf), nln = n < 0,                                                // st-meta-vim-full
+		          e = rangeY(sel.oe.y - offBuf), last = offBuf - nln;                                        // st-meta-vim-full
+		if (pb != b && ((pb < b) != nln)) sel.ob.y = last;                                                   // st-meta-vim-full
+		if (pe != e && ((pe < e) != nln)) sel.oe.y = last;                                                   // st-meta-vim-full
+		if (sel.oe.y == last && sel.ob.y == last) selclear();                                                // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+	selnormalize();                                                                                        // st-meta-vim-full
+  // Clear the new region exposed by the shift.                                                          // st-meta-vim-full
+	if (!histOp) tclearregion(0, n>0?r+1:0, buffCols-1, n>0?term.row:p-1);                                 // st-meta-vim-full
+	return 1;                                                                                              // st-meta-vim-full
+}                                                                                                        // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+int historyMove(int x, int y, int ly) {                                                                  // st-meta-vim-full
+	historyOpToggle(1, 1);                                                                                 // st-meta-vim-full
+	y += ((term.c.x += x) < 0 ?term.c.x-term.col :term.c.x) / term.col;//< x                               // st-meta-vim-full
+	if ((term.c.x %= term.col) < 0) term.c.x += term.col;                                                  // st-meta-vim-full
+	if ((term.c.y += y) >= term.row) ly += term.c.y - term.row + 1;    //< y                               // st-meta-vim-full
+	else if (term.c.y < 0) ly += term.c.y;                                                                 // st-meta-vim-full
+	term.c.y = MIN(MAX(term.c.y, 0), term.row - 1);                                                        // st-meta-vim-full
+	// Check if scroll is necessary / arrived at top / bottom of terminal history                          // st-meta-vim-full
+	int t = 0, b = 0, finTop = ly < 0, finBot = ly > 0;                                                    // st-meta-vim-full
+	if (!IS_SET(MODE_ALTSCREEN)) {                                                                         // st-meta-vim-full
+		b=rangeY(insertOff-histOff), t=-rangeY(-term.row-(insertOff-histOff));                               // st-meta-vim-full
+		finBot = ly > b, finTop=histMode&&((-ly>-t));                                                        // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+	if ((finTop || finBot) && (x||y)) term.c.x = finBot ? term.col-1 : 0;                                  // st-meta-vim-full
+	historyBufferScroll(finBot ? b : (finTop ? t : ly));                                                   // st-meta-vim-full
+	historyOpToggle(-1, 1);                                                                                // st-meta-vim-full
+	return finTop || finBot;                                                                               // st-meta-vim-full
+}                                                                                                        // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+#include "normalMode.c"                                                                                  // st-meta-vim-full
+void selnormalize(void) {                                                                                // st-meta-vim-full
+	historyOpToggle(1, 1);                                                                                 // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+	int const oldb = sel.nb.y, olde = sel.ne.y;                                                            // st-meta-vim-full
+	if (sel.ob.x == -1) {                                                                                  // st-meta-vim-full
+		sel.ne.y = sel.nb.y = -1;                                                                            // st-meta-vim-full
+	} else {                                                                                               // st-meta-vim-full
+		int const offsetBuffer = sel.alt ? 0 : insertOff + term.row;                                         // st-meta-vim-full
+		int const off = sel.alt ? 0 : (histMode ? histOff : insertOff);                                      // st-meta-vim-full
+		int const nby = rangeY(sel.ob.y - off),                                                              // st-meta-vim-full
+		          ney = rangeY(sel.oe.y - off);                                                              // st-meta-vim-full
+		sel.swap = rangeY(sel.ob.y - offsetBuffer)                                                           // st-meta-vim-full
+		         > rangeY(sel.oe.y - offsetBuffer);                                                          // st-meta-vim-full
+		sel.nb.y = sel.swap ? ney : nby;                                                                     // st-meta-vim-full
+		sel.ne.y = !sel.swap ? ney : nby;                                                                    // st-meta-vim-full
+		int const cnb = sel.nb.y < term.row, cne = sel.ne.y < term.row;                                      // st-meta-vim-full
+		if (sel.type == SEL_REGULAR && sel.ob.y != sel.oe.y) {                                               // st-meta-vim-full
+			if (cnb) sel.nb.x = (!sel.swap) ? sel.ob.x : sel.oe.x;                                             // st-meta-vim-full
+			if (cne) sel.ne.x = (!sel.swap) ? sel.oe.x : sel.ob.x;                                             // st-meta-vim-full
+		} else {                                                                                             // st-meta-vim-full
+			if (cnb) sel.nb.x = MIN(sel.ob.x, sel.oe.x);                                                       // st-meta-vim-full
+			if (cne) sel.ne.x = MAX(sel.ob.x, sel.oe.x);                                                       // st-meta-vim-full
+		}                                                                                                    // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+	int const nBet=sel.nb.y<=sel.ne.y, oBet=oldb<=olde;                                                    // st-meta-vim-full
+	for (int i = 0; i < term.row; ++i) {                                                                   // st-meta-vim-full
+		int const n = nBet ? BETWEEN(i, sel.nb.y, sel.ne.y)                                                  // st-meta-vim-full
+		                   : OUT(i, sel.nb.y, sel.ne.y);                                                     // st-meta-vim-full
+		term.dirty[i] |= (sel.type == SEL_RECTANGULAR && n) ||                                               // st-meta-vim-full
+		        (n != (oBet ? BETWEEN(i,oldb,olde) : OUT(i,oldb,olde)));                                     // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+	}                                                                                                      // st-meta-vim-full
+	if (BETWEEN(oldb, 0, term.row - 1)) term.dirty[oldb] = 1;                                              // st-meta-vim-full
+	if (BETWEEN(olde, 0, term.row - 1)) term.dirty[olde] = 1;                                              // st-meta-vim-full
+	if (BETWEEN(sel.nb.y, 0, term.row - 1)) term.dirty[sel.nb.y] = 1;                                      // st-meta-vim-full
+	if (BETWEEN(sel.ne.y, 0, term.row - 1)) term.dirty[sel.ne.y] = 1;                                      // st-meta-vim-full
+                                                                                                         // st-meta-vim-full
+	historyOpToggle(-1, 1);                                                                                // st-meta-vim-full
+}                                                                                                        // st-meta-vim-full
 
 void
 selstart(int col, int row, int snap)
@@ -551,20 +551,20 @@ selstart(int col, int row, int snap)
 	sel.alt = IS_SET(MODE_ALTSCREEN);
 	sel.snap = snap;
 	sel.oe.x = sel.ob.x = col;
-// 	sel.oe.y = sel.ob.y = row;                                                                         // st-meta-vim-full
-	sel.oe.y = sel.ob.y = row + !sel.alt * (histMode ? histOff : insertOff);                           // st-meta-vim-full
-	if (sel.snap != 0) sel.mode = SEL_READY;                                                           // st-meta-vim-full
+// 	sel.oe.y = sel.ob.y = row;                                                                           // st-meta-vim-full
+	sel.oe.y = sel.ob.y = row + !sel.alt * (histMode ? histOff : insertOff);                               // st-meta-vim-full
+	if (sel.snap != 0) sel.mode = SEL_READY;                                                               // st-meta-vim-full
 	selnormalize();
 
-//	if (sel.snap != 0)                                                                                 // st-meta-vim-full
-//		sel.mode = SEL_READY;                                                                          // st-meta-vim-full
-//	tsetdirt(sel.nb.y, sel.ne.y);                                                                      // st-meta-vim-full
+//	if (sel.snap != 0)                                                                                   // st-meta-vim-full
+//		sel.mode = SEL_READY;                                                                              // st-meta-vim-full
+//	tsetdirt(sel.nb.y, sel.ne.y);                                                                        // st-meta-vim-full
 }
 
 void
 selextend(int col, int row, int type, int done)
 {
-//	int oldey, oldex, oldsby, oldsey, oldtype;                                                         // st-meta-vim-full
+//	int oldey, oldex, oldsby, oldsey, oldtype;                                                           // st-meta-vim-full
 
 	if (sel.mode == SEL_IDLE)
 		return;
@@ -573,51 +573,51 @@ selextend(int col, int row, int type, int done)
 		return;
 	}
 
-//	oldey = sel.oe.y;                                                                                  // st-meta-vim-full
-//	oldex = sel.oe.x;                                                                                  // st-meta-vim-full
-//	oldsby = sel.nb.y;                                                                                 // st-meta-vim-full
-//	oldsey = sel.ne.y;                                                                                 // st-meta-vim-full
-//	oldtype = sel.type;                                                                                // st-meta-vim-full
+//	oldey = sel.oe.y;                                                                                    // st-meta-vim-full
+//	oldex = sel.oe.x;                                                                                    // st-meta-vim-full
+//	oldsby = sel.nb.y;                                                                                   // st-meta-vim-full
+//	oldsey = sel.ne.y;                                                                                   // st-meta-vim-full
+//	oldtype = sel.type;                                                                                  // st-meta-vim-full
 
 	sel.oe.x = col;
-//	sel.oe.y = row;                                                                                    // st-meta-vim-full
-	sel.oe.y = row + (sel.alt ? 0 : (histMode ? histOff : insertOff));                                 // st-meta-vim-full
+//	sel.oe.y = row;                                                                                      // st-meta-vim-full
+	sel.oe.y = row + (sel.alt ? 0 : (histMode ? histOff : insertOff));                                     // st-meta-vim-full
 	selnormalize();
 	sel.type = type;
 
-//	if (oldey != sel.oe.y || oldex != sel.oe.x || oldtype != sel.type || sel.mode == SEL_EMPTY)        // st-meta-vim-full
-//		tsetdirt(MIN(sel.nb.y, oldsby), MAX(sel.ne.y, oldsey));                                        // st-meta-vim-full
+//	if (oldey != sel.oe.y || oldex != sel.oe.x || oldtype != sel.type || sel.mode == SEL_EMPTY)          // st-meta-vim-full
+//		tsetdirt(MIN(sel.nb.y, oldsby), MAX(sel.ne.y, oldsey));                                            // st-meta-vim-full
 
 	sel.mode = done ? SEL_IDLE : SEL_READY;
 }
 
-//void                                                                                                 // st-meta-vim-full
-//selnormalize(void)                                                                                   // st-meta-vim-full
-//{                                                                                                    // st-meta-vim-full
-//	int i;                                                                                             // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//	if (sel.type == SEL_REGULAR && sel.ob.y != sel.oe.y) {                                             // st-meta-vim-full
-//		sel.nb.x = sel.ob.y < sel.oe.y ? sel.ob.x : sel.oe.x;                                          // st-meta-vim-full
-//		sel.ne.x = sel.ob.y < sel.oe.y ? sel.oe.x : sel.ob.x;                                          // st-meta-vim-full
-//	} else {                                                                                           // st-meta-vim-full
-//		sel.nb.x = MIN(sel.ob.x, sel.oe.x);                                                            // st-meta-vim-full
-//		sel.ne.x = MAX(sel.ob.x, sel.oe.x);                                                            // st-meta-vim-full
-//	}                                                                                                  // st-meta-vim-full
-//	sel.nb.y = MIN(sel.ob.y, sel.oe.y);                                                                // st-meta-vim-full
-//	sel.ne.y = MAX(sel.ob.y, sel.oe.y);                                                                // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//	selsnap(&sel.nb.x, &sel.nb.y, -1);                                                                 // st-meta-vim-full
-//	selsnap(&sel.ne.x, &sel.ne.y, +1);                                                                 // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//	/* expand selection over line breaks */                                                            // st-meta-vim-full
-//	if (sel.type == SEL_RECTANGULAR)                                                                   // st-meta-vim-full
-//		return;                                                                                        // st-meta-vim-full
-//	i = tlinelen(sel.nb.y);                                                                            // st-meta-vim-full
-//	if (i < sel.nb.x)                                                                                  // st-meta-vim-full
-//		sel.nb.x = i;                                                                                  // st-meta-vim-full
-//	if (tlinelen(sel.ne.y) <= sel.ne.x)                                                                // st-meta-vim-full
-//		sel.ne.x = term.col - 1;                                                                       // st-meta-vim-full
-//}                                                                                                    // st-meta-vim-full
+//void                                                                                                   // st-meta-vim-full
+//selnormalize(void)                                                                                     // st-meta-vim-full
+//{                                                                                                      // st-meta-vim-full
+//	int i;                                                                                               // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//	if (sel.type == SEL_REGULAR && sel.ob.y != sel.oe.y) {                                               // st-meta-vim-full
+//		sel.nb.x = sel.ob.y < sel.oe.y ? sel.ob.x : sel.oe.x;                                              // st-meta-vim-full
+//		sel.ne.x = sel.ob.y < sel.oe.y ? sel.oe.x : sel.ob.x;                                              // st-meta-vim-full
+//	} else {                                                                                             // st-meta-vim-full
+//		sel.nb.x = MIN(sel.ob.x, sel.oe.x);                                                                // st-meta-vim-full
+//		sel.ne.x = MAX(sel.ob.x, sel.oe.x);                                                                // st-meta-vim-full
+//	}                                                                                                    // st-meta-vim-full
+//	sel.nb.y = MIN(sel.ob.y, sel.oe.y);                                                                  // st-meta-vim-full
+//	sel.ne.y = MAX(sel.ob.y, sel.oe.y);                                                                  // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//	selsnap(&sel.nb.x, &sel.nb.y, -1);                                                                   // st-meta-vim-full
+//	selsnap(&sel.ne.x, &sel.ne.y, +1);                                                                   // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//	/* expand selection over line breaks */                                                              // st-meta-vim-full
+//	if (sel.type == SEL_RECTANGULAR)                                                                     // st-meta-vim-full
+//		return;                                                                                            // st-meta-vim-full
+//	i = tlinelen(sel.nb.y);                                                                              // st-meta-vim-full
+//	if (i < sel.nb.x)                                                                                    // st-meta-vim-full
+//		sel.nb.x = i;                                                                                      // st-meta-vim-full
+//	if (tlinelen(sel.ne.y) <= sel.ne.x)                                                                  // st-meta-vim-full
+//		sel.ne.x = term.col - 1;                                                                           // st-meta-vim-full
+//}                                                                                                      // st-meta-vim-full
 
 int
 selected(int x, int y)
@@ -630,133 +630,133 @@ selected(int x, int y)
 		return BETWEEN(y, sel.nb.y, sel.ne.y)
 		    && BETWEEN(x, sel.nb.x, sel.ne.x);
 
-//	return BETWEEN(y, sel.nb.y, sel.ne.y)                                                              // st-meta-vim-full
-//	    && (y != sel.nb.y || x >= sel.nb.x)                                                            // st-meta-vim-full
-//	    && (y != sel.ne.y || x <= sel.ne.x);                                                           // st-meta-vim-full
+//	return BETWEEN(y, sel.nb.y, sel.ne.y)                                                                // st-meta-vim-full
+//	    && (y != sel.nb.y || x >= sel.nb.x)                                                              // st-meta-vim-full
+//	    && (y != sel.ne.y || x <= sel.ne.x);                                                             // st-meta-vim-full
 
-	return ((sel.nb.y > sel.ne.y) ? OUT(y, sel.nb.y, sel.ne.y) : BETWEEN(y, sel.nb.y, sel.ne.y))       // st-meta-vim-full
-        && (y != sel.nb.y || x >= sel.nb.x)                                                            // st-meta-vim-full
-        && (y != sel.ne.y || x <= sel.ne.x);                                                           // st-meta-vim-full
+	return ((sel.nb.y > sel.ne.y) ? OUT(y, sel.nb.y, sel.ne.y) : BETWEEN(y, sel.nb.y, sel.ne.y))           // st-meta-vim-full
+        && (y != sel.nb.y || x >= sel.nb.x)                                                              // st-meta-vim-full
+        && (y != sel.ne.y || x <= sel.ne.x);                                                             // st-meta-vim-full
 }
 
-//void                                                                                                 // st-meta-vim-full
-//selsnap(int *x, int *y, int direction)                                                               // st-meta-vim-full
-//{                                                                                                    // st-meta-vim-full
-//	int newx, newy, xt, yt;                                                                            // st-meta-vim-full
-//	int delim, prevdelim;                                                                              // st-meta-vim-full
-//	const Glyph *gp, *prevgp;                                                                          // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//	switch (sel.snap) {                                                                                // st-meta-vim-full
-//	case SNAP_WORD:                                                                                    // st-meta-vim-full
-//		/*                                                                                             // st-meta-vim-full
-//		 * Snap around if the word wraps around at the end or                                          // st-meta-vim-full
-//		 * beginning of a line.                                                                        // st-meta-vim-full
-//		 */                                                                                            // st-meta-vim-full
-//		prevgp = &term.line[*y][*x];                                                                   // st-meta-vim-full
-//		prevdelim = ISDELIM(prevgp->u);                                                                // st-meta-vim-full
-//		for (;;) {                                                                                     // st-meta-vim-full
-//			newx = *x + direction;                                                                     // st-meta-vim-full
-//			newy = *y;                                                                                 // st-meta-vim-full
-//			if (!BETWEEN(newx, 0, term.col - 1)) {                                                     // st-meta-vim-full
-//				newy += direction;                                                                     // st-meta-vim-full
-//				newx = (newx + term.col) % term.col;                                                   // st-meta-vim-full
-//				if (!BETWEEN(newy, 0, term.row - 1))                                                   // st-meta-vim-full
-//					break;                                                                             // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//				if (direction > 0)                                                                     // st-meta-vim-full
-//					yt = *y, xt = *x;                                                                  // st-meta-vim-full
-//				else                                                                                   // st-meta-vim-full
-//					yt = newy, xt = newx;                                                              // st-meta-vim-full
-//				if (!(term.line[yt][xt].mode & ATTR_WRAP))                                             // st-meta-vim-full
-//					break;                                                                             // st-meta-vim-full
-//			}                                                                                          // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//			if (newx >= tlinelen(newy))                                                                // st-meta-vim-full
-//				break;                                                                                 // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//			gp = &term.line[newy][newx];                                                               // st-meta-vim-full
-//			delim = ISDELIM(gp->u);                                                                    // st-meta-vim-full
-//			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim                                       // st-meta-vim-full
-//					|| (delim && gp->u != prevgp->u)))                                                 // st-meta-vim-full
-//				break;                                                                                 // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
-//			*x = newx;                                                                                 // st-meta-vim-full
-//			*y = newy;                                                                                 // st-meta-vim-full
-//			prevgp = gp;                                                                               // st-meta-vim-full
-//			prevdelim = delim;                                                                         // st-meta-vim-full
-//		}                                                                                              // st-meta-vim-full
-//		break;                                                                                         // st-meta-vim-full
-//	case SNAP_LINE:                                                                                    // st-meta-vim-full
-//		/*                                                                                             // st-meta-vim-full
-//		 * Snap around if the the previous line or the current one                                     // st-meta-vim-full
-//		 * has set ATTR_WRAP at its end. Then the whole next or                                        // st-meta-vim-full
-//		 * previous line will be selected.                                                             // st-meta-vim-full
-//		 */                                                                                            // st-meta-vim-full
-//		*x = (direction < 0) ? 0 : term.col - 1;                                                       // st-meta-vim-full
-//		if (direction < 0) {                                                                           // st-meta-vim-full
-//			for (; *y > 0; *y += direction) {                                                          // st-meta-vim-full
-//				if (!(term.line[*y-1][term.col-1].mode                                                 // st-meta-vim-full
-//						& ATTR_WRAP)) {                                                                // st-meta-vim-full
-//					break;                                                                             // st-meta-vim-full
-//				}                                                                                      // st-meta-vim-full
-//			}                                                                                          // st-meta-vim-full
-//		} else if (direction > 0) {                                                                    // st-meta-vim-full
-//			for (; *y < term.row-1; *y += direction) {                                                 // st-meta-vim-full
-//				if (!(term.line[*y][term.col-1].mode                                                   // st-meta-vim-full
-//						& ATTR_WRAP)) {                                                                // st-meta-vim-full
-//					break;                                                                             // st-meta-vim-full
-//				}                                                                                      // st-meta-vim-full
-//			}                                                                                          // st-meta-vim-full
-//		}                                                                                              // st-meta-vim-full
-//		break;                                                                                         // st-meta-vim-full
-//	}                                                                                                  // st-meta-vim-full
-//}                                                                                                    // st-meta-vim-full
+//void                                                                                                   // st-meta-vim-full
+//selsnap(int *x, int *y, int direction)                                                                 // st-meta-vim-full
+//{                                                                                                      // st-meta-vim-full
+//	int newx, newy, xt, yt;                                                                              // st-meta-vim-full
+//	int delim, prevdelim;                                                                                // st-meta-vim-full
+//	const Glyph *gp, *prevgp;                                                                            // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//	switch (sel.snap) {                                                                                  // st-meta-vim-full
+//	case SNAP_WORD:                                                                                      // st-meta-vim-full
+//		/*                                                                                                 // st-meta-vim-full
+//		 * Snap around if the word wraps around at the end or                                              // st-meta-vim-full
+//		 * beginning of a line.                                                                            // st-meta-vim-full
+//		 */                                                                                                // st-meta-vim-full
+//		prevgp = &term.line[*y][*x];                                                                       // st-meta-vim-full
+//		prevdelim = ISDELIM(prevgp->u);                                                                    // st-meta-vim-full
+//		for (;;) {                                                                                         // st-meta-vim-full
+//			newx = *x + direction;                                                                           // st-meta-vim-full
+//			newy = *y;                                                                                       // st-meta-vim-full
+//			if (!BETWEEN(newx, 0, term.col - 1)) {                                                           // st-meta-vim-full
+//				newy += direction;                                                                             // st-meta-vim-full
+//				newx = (newx + term.col) % term.col;                                                           // st-meta-vim-full
+//				if (!BETWEEN(newy, 0, term.row - 1))                                                           // st-meta-vim-full
+//					break;                                                                                       // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//				if (direction > 0)                                                                             // st-meta-vim-full
+//					yt = *y, xt = *x;                                                                            // st-meta-vim-full
+//				else                                                                                           // st-meta-vim-full
+//					yt = newy, xt = newx;                                                                        // st-meta-vim-full
+//				if (!(term.line[yt][xt].mode & ATTR_WRAP))                                                     // st-meta-vim-full
+//					break;                                                                                       // st-meta-vim-full
+//			}                                                                                                // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//			if (newx >= tlinelen(newy))                                                                      // st-meta-vim-full
+//				break;                                                                                         // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//			gp = &term.line[newy][newx];                                                                     // st-meta-vim-full
+//			delim = ISDELIM(gp->u);                                                                          // st-meta-vim-full
+//			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim                                             // st-meta-vim-full
+//					|| (delim && gp->u != prevgp->u)))                                                           // st-meta-vim-full
+//				break;                                                                                         // st-meta-vim-full
+//                                                                                                       // st-meta-vim-full
+//			*x = newx;                                                                                       // st-meta-vim-full
+//			*y = newy;                                                                                       // st-meta-vim-full
+//			prevgp = gp;                                                                                     // st-meta-vim-full
+//			prevdelim = delim;                                                                               // st-meta-vim-full
+//		}                                                                                                  // st-meta-vim-full
+//		break;                                                                                             // st-meta-vim-full
+//	case SNAP_LINE:                                                                                      // st-meta-vim-full
+//		/*                                                                                                 // st-meta-vim-full
+//		 * Snap around if the the previous line or the current one                                         // st-meta-vim-full
+//		 * has set ATTR_WRAP at its end. Then the whole next or                                            // st-meta-vim-full
+//		 * previous line will be selected.                                                                 // st-meta-vim-full
+//		 */                                                                                                // st-meta-vim-full
+//		*x = (direction < 0) ? 0 : term.col - 1;                                                           // st-meta-vim-full
+//		if (direction < 0) {                                                                               // st-meta-vim-full
+//			for (; *y > 0; *y += direction) {                                                                // st-meta-vim-full
+//				if (!(term.line[*y-1][term.col-1].mode                                                         // st-meta-vim-full
+//						& ATTR_WRAP)) {                                                                            // st-meta-vim-full
+//					break;                                                                                       // st-meta-vim-full
+//				}                                                                                              // st-meta-vim-full
+//			}                                                                                                // st-meta-vim-full
+//		} else if (direction > 0) {                                                                        // st-meta-vim-full
+//			for (; *y < term.row-1; *y += direction) {                                                       // st-meta-vim-full
+//				if (!(term.line[*y][term.col-1].mode                                                           // st-meta-vim-full
+//						& ATTR_WRAP)) {                                                                            // st-meta-vim-full
+//					break;                                                                                       // st-meta-vim-full
+//				}                                                                                              // st-meta-vim-full
+//			}                                                                                                // st-meta-vim-full
+//		}                                                                                                  // st-meta-vim-full
+//		break;                                                                                             // st-meta-vim-full
+//	}                                                                                                    // st-meta-vim-full
+//}                                                                                                      // st-meta-vim-full
 
 char *
 getsel(void)
 {
 	char *str, *ptr;
-// 	int y, bufsize, lastx, linelen;                                                                    // st-meta-vim-full
-	int y, yy, bufsize, lastx;                                                                         // st-meta-vim-full
+// 	int y, bufsize, lastx, linelen;                                                                      // st-meta-vim-full
+	int y, yy, bufsize, lastx;                                                                             // st-meta-vim-full
 	const Glyph *gp, *last;
 
 	if (sel.ob.x == -1)
 		return NULL;
 
-// 	bufsize = (term.col+1) * (sel.ne.y-sel.nb.y+1) * UTF_SIZ;                                          // st-meta-vim-full
-	int const start = sel.swap ? sel.oe.y : sel.ob.y, h = rows();                                      // st-meta-vim-full
-	int endy = (sel.swap ? sel.ob.y : sel.oe.y);                                                       // st-meta-vim-full
-	for (; endy < start; endy += h);                                                                   // st-meta-vim-full
-	Line * const cbuf = IS_SET(MODE_ALTSCREEN) ? term.line : buf;                                      // st-meta-vim-full
-	bufsize = (term.col+1) * (endy-start+1 ) * UTF_SIZ;                                                // st-meta-vim-full
-	assert(bufsize > 0);                                                                               // st-meta-vim-full
+// 	bufsize = (term.col+1) * (sel.ne.y-sel.nb.y+1) * UTF_SIZ;                                            // st-meta-vim-full
+	int const start = sel.swap ? sel.oe.y : sel.ob.y, h = rows();                                          // st-meta-vim-full
+	int endy = (sel.swap ? sel.ob.y : sel.oe.y);                                                           // st-meta-vim-full
+	for (; endy < start; endy += h);                                                                       // st-meta-vim-full
+	Line * const cbuf = IS_SET(MODE_ALTSCREEN) ? term.line : buf;                                          // st-meta-vim-full
+	bufsize = (term.col+1) * (endy-start+1 ) * UTF_SIZ;                                                    // st-meta-vim-full
+	assert(bufsize > 0);                                                                                   // st-meta-vim-full
 	ptr = str = xmalloc(bufsize);
 
 	/* append every set & selected glyph to the selection */
-//	for (y = sel.nb.y; y <= sel.ne.y; y++) {                                                           // st-meta-vim-full
-//		if ((linelen = tlinelen(y)) == 0) {                                                            // st-meta-vim-full
-//			*ptr++ = '\n';                                                                             // st-meta-vim-full
-//			continue;                                                                                  // st-meta-vim-full
-//		}                                                                                              // st-meta-vim-full
-	for (y = start; y <= endy; y++) {                                                                  // st-meta-vim-full
-		yy = y % h;                                                                                    // st-meta-vim-full
+//	for (y = sel.nb.y; y <= sel.ne.y; y++) {                                                             // st-meta-vim-full
+//		if ((linelen = tlinelen(y)) == 0) {                                                                // st-meta-vim-full
+//			*ptr++ = '\n';                                                                                   // st-meta-vim-full
+//			continue;                                                                                        // st-meta-vim-full
+//		}                                                                                                  // st-meta-vim-full
+	for (y = start; y <= endy; y++) {                                                                      // st-meta-vim-full
+		yy = y % h;                                                                                          // st-meta-vim-full
 
 		if (sel.type == SEL_RECTANGULAR) {
-// 			gp = &term.line[y][sel.nb.x];                                                              // st-meta-vim-full
-			gp = &cbuf[yy][sel.nb.x];                                                                  // st-meta-vim-full
+// 			gp = &term.line[y][sel.nb.x];                                                                    // st-meta-vim-full
+			gp = &cbuf[yy][sel.nb.x];                                                                          // st-meta-vim-full
 			lastx = sel.ne.x;
 		} else {
-//			gp = &term.line[y][sel.nb.y == y ? sel.nb.x : 0];                                          // st-meta-vim-full
-//			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;                                           // st-meta-vim-full
-			gp = &cbuf[yy][start == y ? sel.nb.x : 0];                                                 // st-meta-vim-full
-			lastx = (endy == y) ? sel.ne.x : term.col-1;                                               // st-meta-vim-full
+//			gp = &term.line[y][sel.nb.y == y ? sel.nb.x : 0];                                                // st-meta-vim-full
+//			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;                                                 // st-meta-vim-full
+			gp = &cbuf[yy][start == y ? sel.nb.x : 0];                                                         // st-meta-vim-full
+			lastx = (endy == y) ? sel.ne.x : term.col-1;                                                       // st-meta-vim-full
 		}
-//		last = &term.line[y][MIN(lastx, linelen-1)];                                                   // st-meta-vim-full
-//		while (last >= gp && last->u == ' ')                                                           // st-meta-vim-full
-//			--last;                                                                                    // st-meta-vim-full
-		last = &cbuf[yy][lastx];                                                                       // st-meta-vim-full
-		if (!(cbuf[yy][term.col - 1].mode & ATTR_WRAP))                                                // st-meta-vim-full
-			while (last > gp && last->u == ' ') --last;                                                // st-meta-vim-full
+//		last = &term.line[y][MIN(lastx, linelen-1)];                                                       // st-meta-vim-full
+//		while (last >= gp && last->u == ' ')                                                               // st-meta-vim-full
+//			--last;                                                                                          // st-meta-vim-full
+		last = &cbuf[yy][lastx];                                                                             // st-meta-vim-full
+		if (!(cbuf[yy][term.col - 1].mode & ATTR_WRAP))                                                      // st-meta-vim-full
+			while (last > gp && last->u == ' ') --last;                                                        // st-meta-vim-full
 
 		for ( ; gp <= last; ++gp) {
 			if (gp->mode & ATTR_WDUMMY)
@@ -774,8 +774,8 @@ getsel(void)
 		 * st.
 		 * FIXME: Fix the computer world.
 		 */
-// 		if ((y < sel.ne.y || lastx >= linelen) &&                                                      // st-meta-vim-full
-		if ((y < endy || lastx == term.col - 1) &&                                                     // st-meta-vim-full
+// 		if ((y < sel.ne.y || lastx >= linelen) &&                                                          // st-meta-vim-full
+		if ((y < endy || lastx == term.col - 1) &&                                                           // st-meta-vim-full
 		    (!(last->mode & ATTR_WRAP) || sel.type == SEL_RECTANGULAR))
 			*ptr++ = '\n';
 	}
@@ -790,8 +790,8 @@ selclear(void)
 		return;
 	sel.mode = SEL_IDLE;
 	sel.ob.x = -1;
-// 	tsetdirt(sel.nb.y, sel.ne.y);                                                                      // st-meta-vim-full
-	selnormalize();                                                                                    // st-meta-vim-full
+// 	tsetdirt(sel.nb.y, sel.ne.y);                                                                        // st-meta-vim-full
+	selnormalize();                                                                                        // st-meta-vim-full
 }
 
 void
@@ -1146,7 +1146,7 @@ tcursor(int mode)
 {
 //	static TCursor c[2];                                                                               // st-meta-vim-full
 //	int alt = IS_SET(MODE_ALTSCREEN);                                                                  // st-meta-vim-full
-	int alt = (histOp) ? 0 : (IS_SET(MODE_ALTSCREEN) + 1);                                             // st-meta-vim-full
+	int alt = (histOp) ? 0 : (IS_SET(MODE_ALTSCREEN) + 1);                                               // st-meta-vim-full
 
 	if (mode == CURSOR_SAVE) {
 		c[alt] = term.c;
@@ -1381,8 +1381,8 @@ tclearregion(int x1, int y1, int x2, int y2)
 
 //	LIMIT(x1, 0, term.col-1);                                                                          // st-meta-vim-full
 //	LIMIT(x2, 0, term.col-1);                                                                          // st-meta-vim-full
-	LIMIT(x1, 0, buffCols-1);                                                                          // st-meta-vim-full
-	LIMIT(x2, 0, buffCols-1);                                                                          // st-meta-vim-full
+	LIMIT(x1, 0, buffCols-1);                                                                            // st-meta-vim-full
+	LIMIT(x2, 0, buffCols-1);                                                                            // st-meta-vim-full
 	LIMIT(y1, 0, term.row-1);
 	LIMIT(y2, 0, term.row-1);
 
@@ -2603,7 +2603,7 @@ check_control_code:
 		return;
 	}
 //	if (selected(term.c.x, term.c.y))                                                                  // st-meta-vim-full
-//		selclear();                                                                                    // st-meta-vim-full
+//		selclear();                                                                                      // st-meta-vim-full
 
 	gp = &term.line[term.c.y][term.c.x];
 	if (IS_SET(MODE_WRAP) && (term.c.state & CURSOR_WRAPNEXT)) {
@@ -2713,7 +2713,7 @@ tresize(int col, int row)
 	}
 
 	/* resize to new height */
-// 	term.line = xrealloc(term.line, row * sizeof(Line));                                               // st-meta-vim-full
+// 	term.line = xrealloc(term.line, row * sizeof(Line));                                             // st-meta-vim-full
 	buf = xrealloc(buf, (buffSize + row) * sizeof(Line));                                              // st-meta-vim-full
 	term.alt  = xrealloc(term.alt,  row * sizeof(Line));
 	term.dirty = xrealloc(term.dirty, row * sizeof(*term.dirty));
@@ -2731,13 +2731,13 @@ tresize(int col, int row)
 //		term.line[i] = xmalloc(col * sizeof(Glyph));                                                   // st-meta-vim-full
 		term.alt[i] = xmalloc(col * sizeof(Glyph));
 	}
-//	if (col > term.col) {                                                                              // st-meta-vim-full
+//	if (col > term.col) {                                                                            // st-meta-vim-full
 //		bp = term.tabs + term.col;                                                                     // st-meta-vim-full
 	if (col > buffCols) {
 		bp = term.tabs + buffCols;
 
 // 		memset(bp, 0, sizeof(*term.tabs) * (col - term.col));                                          // st-meta-vim-full
-		memset(bp, 0, sizeof(*term.tabs) * (col - buffCols));                                          // st-meta-vim-full
+		memset(bp, 0, sizeof(*term.tabs) * (col - buffCols));                                            // st-meta-vim-full
 		while (--bp > term.tabs && !*bp)
 			/* nothing */ ;
 		for (bp += tabspaces; bp < term.tabs + col; bp += tabspaces)
@@ -2745,14 +2745,14 @@ tresize(int col, int row)
 	}
 	Glyph g=(Glyph){.bg=term.c.attr.bg, .fg=term.c.attr.fg, .u=' ', .mode=0};                          // st-meta-vim-full
 	for (i = 0; i < buffSize; ++i) {                                                                   // st-meta-vim-full
-		buf[i] = xrealloc(ini ? NULL : buf[i], col*sizeof(Glyph));                                     // st-meta-vim-full
-		for (int j = ini ? 0 : buffCols; j < col; ++j) buf[i][j] = g;                                  // st-meta-vim-full
+		buf[i] = xrealloc(ini ? NULL : buf[i], col*sizeof(Glyph));                                       // st-meta-vim-full
+		for (int j = ini ? 0 : buffCols; j < col; ++j) buf[i][j] = g;                                    // st-meta-vim-full
 	}                                                                                                  // st-meta-vim-full
 	for (i = 0; i < row; ++i) buf[buffSize + i] = buf[i];                                              // st-meta-vim-full
 	term.line = &buf[*(histOp?&histOff:&insertOff) +=MAX(term.c.y-row+1,0)];                           // st-meta-vim-full
 	memset(mark, 0, col * row * sizeof(*mark));                                                        // st-meta-vim-full
 	/* update terminal size */
-// 	term.col = col;                                                                                    // st-meta-vim-full
+// 	term.col = col;                                                                                  // st-meta-vim-full
 	term.col = colSet;                                                                                 // st-meta-vim-full
 	buffCols = col;                                                                                    // st-meta-vim-full
 	term.row = row;
@@ -2786,19 +2786,19 @@ void
 drawregion(int x1, int y1, int x2, int y2)
 {
 	if (altToggle && histMode && !histOp)                                                              // st-meta-vim-full
-		memset(term.dirty, 0, sizeof(*term.dirty) * term.row);                                         // st-meta-vim-full
+		memset(term.dirty, 0, sizeof(*term.dirty) * term.row);                                           // st-meta-vim-full
 	int const o = !IS_SET(MODE_ALTSCREEN) && histMode && !histOp, h =rows();                           // st-meta-vim-full
 	int y;
 
 	for (y = y1; y < y2; y++) {
 //		if (!term.dirty[y])                                                                            // st-meta-vim-full
-//			continue;                                                                                  // st-meta-vim-full
-//                                                                                                     // st-meta-vim-full
+//			continue;                                                                                    // st-meta-vim-full
+//                                                                                                   // st-meta-vim-full
 //		term.dirty[y] = 0;                                                                             // st-meta-vim-full
 //		xdrawline(term.line[y], x1, y, x2);                                                            // st-meta-vim-full
-		int const oy = o ? (y + insertOff - histOff + h) % h : y;                                      // st-meta-vim-full
-		if (!BETWEEN(oy, 0, term.row-1) || !term.dirty[y]) continue;                                   // st-meta-vim-full
-		xdrawline(term.line[y], x1, oy, x2);                                                           // st-meta-vim-full
+		int const oy = o ? (y + insertOff - histOff + h) % h : y;                                        // st-meta-vim-full
+		if (!BETWEEN(oy, 0, term.row-1) || !term.dirty[y]) continue;                                     // st-meta-vim-full
+		xdrawline(term.line[y], x1, oy, x2);                                                             // st-meta-vim-full
 	}
 	memset(&term.dirty[y1], 0, sizeof(*term.dirty) * (y2 - y1));
 }
