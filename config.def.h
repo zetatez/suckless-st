@@ -7,7 +7,7 @@
  */
 /* static char *font = "Liberation Mono:pixelsize=15:antialias=true:autohint=true"; */
 // static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
-static char *font = "Liberation Mono:pixelsize=26:antialias=true:autohint=true";
+static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
 static int borderpx = 2;
 
 /*
@@ -96,8 +96,8 @@ char *termname = "st-256color";
 unsigned int tabspaces = 4;
 
 /* bg opacity */
-float alpha = 0.81, alphaUnfocused = 0.64;
-// float alpha = 0.1, alphaUnfocused = 0.4;
+// float alpha = 0.81, alphaUnfocused = 0.64;
+float alpha = 0.1, alphaUnfocused = 0.4;
 
 
 static const char *colorname[] = {
