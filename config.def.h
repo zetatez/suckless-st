@@ -134,10 +134,10 @@ static const char *colorname[] = {
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 6;
+unsigned int defaultfg = 6; // foreground color: font color
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 6; // cursor color
-static unsigned int defaultrcs = 257;
+unsigned int defaultcs = 4;  // cursor color
+static unsigned int defaultrcs = 12;
 unsigned int bg = 0, bgUnfocused = 0;                                                                                                                                           // st-focus
 unsigned int const currentBg = 0, buffSize = 2048;                                                                                                                              // st -meta-vim-full
 /// Enable double / triple click yanking / selection of word / line.                                                                                                            // st -meta-vim-full
@@ -194,11 +194,11 @@ static uint forcemousemod = ShiftMask;
  */
 static MouseShortcut mshortcuts[] = {
 	/* mask                 button   function        argument       release */
-	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},      1 },
+	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},        1 },
 	{ ShiftMask,            Button4, ttysend,        {.s = "\033[5;2~"} },
-	{ XK_ANY_MOD,           Button4, ttysend,        {.s = "\031"} },
+	{ XK_ANY_MOD,           Button4, ttysend,        {.s = "\031"}      },
 	{ ShiftMask,            Button5, ttysend,        {.s = "\033[6;2~"} },
-	{ XK_ANY_MOD,           Button5, ttysend,        {.s = "\005"} },
+	{ XK_ANY_MOD,           Button5, ttysend,        {.s = "\005"}      },
 };
 
 /* Internal keyboard shortcuts. */
