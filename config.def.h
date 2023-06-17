@@ -96,8 +96,8 @@ char *termname = "st-256color";
 unsigned int tabspaces = 4;
 
 /* bg opacity */
-// float alpha = 0.81, alphaUnfocused = 0.64;
-float alpha = 0.1, alphaUnfocused = 0.4;
+float alpha = 0.81, alphaUnfocused = 0.64;
+// float alpha = 0.1, alphaUnfocused = 0.4;
 
 
 static const char *colorname[] = {
@@ -136,7 +136,7 @@ static const char *colorname[] = {
  */
 unsigned int defaultfg = 6; // foreground color: font color
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 4;  // cursor color
+unsigned int defaultcs = 6;  // cursor color
 static unsigned int defaultrcs = 12;
 unsigned int bg = 0, bgUnfocused = 0;                                                                                                                                           // st-focus
 unsigned int const currentBg = 0, buffSize = 2048;                                                                                                                              // st -meta-vim-full
