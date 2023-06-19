@@ -96,8 +96,8 @@ char *termname = "st-256color";
 unsigned int tabspaces = 4;
 
 /* bg opacity */
-// float alpha = 0.81, alphaUnfocused = 0.64;
-float alpha = 0.1, alphaUnfocused = 0.4;
+float alpha = 0.81, alphaUnfocused = 0.64;
+// float alpha = 0.1, alphaUnfocused = 0.2;
 
 
 static const char *colorname[] = {
@@ -108,7 +108,7 @@ static const char *colorname[] = {
 	"yellow3",
 	"blue2",
 	"magenta3",
-	"#1768d4",
+	"#005577",
 	"gray90",
 
 	/* 8-15 8 bright colors */
@@ -135,22 +135,22 @@ static const char *colorname[] = {
  * foreground, background, cursor, reverse cursor
  */
 unsigned int defaultfg = 6; // foreground color: font color
-unsigned int defaultbg = 0;
-unsigned int defaultcs = 6;  // cursor color
-static unsigned int defaultrcs = 12;
-unsigned int bg = 0, bgUnfocused = 0;                                                                                                                                           // st-focus
-unsigned int const currentBg = 0, buffSize = 2048;                                                                                                                              // st -meta-vim-full
+unsigned int defaultbg = 5;
+unsigned int defaultcs = 2;  // cursor color
+static unsigned int defaultrcs = 0;
+unsigned int bg = 0, bgUnfocused = 0; // focus st color and unfocus st color                                                                                                    // st-focus
+unsigned int const currentBg = 3, buffSize = 2048; // normal mode: alt-n cross + color                                                                                          // st -meta-vim-full
 /// Enable double / triple click yanking / selection of word / line.                                                                                                            // st -meta-vim-full
 int const mouseYank = 1, mouseSelect = 1;                                                                                                                                       // st -meta-vim-full
 /// [Vim Browse] Colors for search results currently on screen.                                                                                                                 // st -meta-vim-full
-unsigned int const highlightBg = 0, highlightFg = 6;                                                                                                                           // st -meta-vim-full
+unsigned int const highlightBg = 3, highlightFg = 6;                                                                                                                            // st -meta-vim-full
 char const wDelS[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", wDelL[] = " \t";                                                                                                      // st -meta-vim-full
  //< Shortcusts executed in normal mode                                                                                                                                         // st -meta-vim-full
 char *nmKeys [] = { "R/Building\nN", "r/Building\n", "X/juli@machine\nN", "x/juli@machine\n", "Q?[Leaving vim, starting execution]\n","F/: error:\nN", "f/: error:\n", "DQf" }; // st -meta-vim-full
 unsigned int const amountNmKeys = sizeof(nmKeys) / sizeof(*nmKeys);                                                                                                             // st -meta-vim-full
 /// Style of the {command, search} string shown in the right corner (y,v,V,/)                                                                                                   // st -meta-vim-full
-Glyph styleSearch = {' ', ATTR_ITALIC | ATTR_BOLD_FAINT, 7, 16};                                                                                                                // st -meta-vim-full
-Glyph style[] = {{' ',ATTR_ITALIC|ATTR_FAINT,15,16}, {' ',ATTR_ITALIC,232,11}, {' ', ATTR_ITALIC, 232, 4}, {' ', ATTR_ITALIC, 232, 12}};                                        // st -meta-vim-full
+Glyph styleSearch = {' ', ATTR_ITALIC|ATTR_BOLD_FAINT, 7, 16};                                                                                                                // st -meta-vim-full
+Glyph style[] = {{' ', ATTR_ITALIC|ATTR_FAINT, 15, 16}, {' ', ATTR_ITALIC, 232, 11}, {' ', ATTR_ITALIC, 232, 4}, {' ', ATTR_ITALIC, 232, 12}};                                  // st -meta-vim-full
 
 /*
  * Default shape of cursor
@@ -172,8 +172,8 @@ static unsigned int rows = 24;
  * Default colour and shape of the mouse cursor
  */
 static unsigned int mouseshape = XC_xterm;
-static unsigned int mousefg = 7;
-static unsigned int mousebg = 0;
+static unsigned int mousefg = 5;
+static unsigned int mousebg = 3;
 
 /*
  * Color used to display font attributes when fontconfig selected a font which
