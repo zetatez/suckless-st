@@ -149,7 +149,7 @@ char const wDelS[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", wDelL[] = " \t";      
 char *nmKeys [] = { "R/Building\nN", "r/Building\n", "X/juli@machine\nN", "x/juli@machine\n", "Q?[Leaving vim, starting execution]\n","F/: error:\nN", "f/: error:\n", "DQf" }; // st -meta-vim-full
 unsigned int const amountNmKeys = sizeof(nmKeys) / sizeof(*nmKeys);                                                                                                             // st -meta-vim-full
 /// Style of the {command, search} string shown in the right corner (y,v,V,/)                                                                                                   // st -meta-vim-full
-Glyph styleSearch = {' ', ATTR_ITALIC|ATTR_BOLD_FAINT, 7, 16};                                                                                                                // st -meta-vim-full
+Glyph styleSearch = {' ', ATTR_ITALIC|ATTR_BOLD_FAINT, 7, 16};                                                                                                                  // st -meta-vim-full
 Glyph style[] = {{' ', ATTR_ITALIC|ATTR_FAINT, 15, 16}, {' ', ATTR_ITALIC, 232, 11}, {' ', ATTR_ITALIC, 232, 4}, {' ', ATTR_ITALIC, 232, 12}};                                  // st -meta-vim-full
 
 /*
