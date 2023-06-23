@@ -5,8 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
-// static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
+// static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
+static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
 static int borderpx = 2;
 
 /*
@@ -96,7 +96,8 @@ unsigned int tabspaces = 4;
 
 /* bg opacity */
 // float alpha = 0.96, alphaUnfocused = 0.81;
-float alpha = 0.08, alphaUnfocused = 0.16;
+float alpha = 0.81, alphaUnfocused = 0.93;
+// float alpha = 0.08, alphaUnfocused = 0.16;
 
 static const char *colorname[] = {
 	/* 0-7 8 normal colors */
@@ -132,12 +133,12 @@ static const char *colorname[] = {
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 0; // foreground color: font color
-unsigned int defaultbg = 6;
+unsigned int defaultfg = 6; // foreground color: font color
+unsigned int defaultbg = 0;
 unsigned int defaultcs = 5;  // cursor color
 static unsigned int defaultrcs = 0;
-unsigned int bg = 6, bgUnfocused = 6; // focus st color and unfocus st color                                                                                                    // st-focus
-unsigned int const currentBg = 6, buffSize = 2048; // normal mode: alt-n cross + color                                                                                          // st -meta-vim-full
+unsigned int bg = 0, bgUnfocused = 0; // focus st color and unfocus st color                                                                                                    // st-focus
+unsigned int const currentBg = 5, buffSize = 2048; // normal mode: alt-n cross + color                                                                                          // st -meta-vim-full
 /// Enable double / triple click yanking / selection of word / line.                                                                                                            // st -meta-vim-full
 int const mouseYank = 1, mouseSelect = 1;                                                                                                                                       // st -meta-vim-full
 /// [Vim Browse] Colors for search results currently on screen.                                                                                                                 // st -meta-vim-full
