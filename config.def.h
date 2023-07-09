@@ -7,7 +7,7 @@
  */
 // static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
 static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
-static int borderpx = 2;
+static int borderpx = 0;
 
 /*
  * What program is execed by st depends of these precedence rules:
@@ -96,8 +96,8 @@ unsigned int tabspaces = 4;
 
 /* bg opacity */
 // float alpha = 0.96, alphaUnfocused = 0.81;
-// float alpha = 0.81, alphaUnfocused = 0.64;
-float alpha = 0.08, alphaUnfocused = 0.16;
+float alpha = 0.81, alphaUnfocused = 0.64;
+// float alpha = 0.08, alphaUnfocused = 0.16;
 
 static const char *colorname[] = {
 	/* 0-7 8 normal colors */
