@@ -133,12 +133,13 @@ static const char *colorname[] = {
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 257; // foreground color: font color
+// unsigned int defaultfg = 257; // foreground color: font color
+unsigned int defaultfg = 6; // foreground color: font color
 unsigned int defaultbg = 0;
 unsigned int defaultcs = 6;  // cursor color
 static unsigned int defaultrcs = 0;
 unsigned int bg = 0, bgUnfocused = 0; // focus st color and unfocus st color                                                                                                    // st-focus
-unsigned int const currentBg = 6, buffSize = 2048; // normal mode: alt-n cross + color                                                                                          // st -meta-vim-full
+unsigned int const currentBg = 5, buffSize = 2048; // normal mode: alt-n cross + color                                                                                          // st -meta-vim-full
 /// Enable double / triple click yanking / selection of word / line.                                                                                                            // st -meta-vim-full
 int const mouseYank = 1, mouseSelect = 1;                                                                                                                                       // st -meta-vim-full
 /// [Vim Browse] Colors for search results currently on screen.                                                                                                                 // st -meta-vim-full
