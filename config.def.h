@@ -5,8 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-// static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
-static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
+static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
+// static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
 static int borderpx = 0;
 
 /*
@@ -139,11 +139,11 @@ unsigned int defaultbg = 0;
 unsigned int defaultcs = 6;  // cursor color
 static unsigned int defaultrcs = 0;
 unsigned int bg = 0, bgUnfocused = 0; // focus st color and unfocus st color                                                                                                    // st-focus
-unsigned int const currentBg = 5, buffSize = 2048; // normal mode: alt-n cross + color                                                                                          // st -meta-vim-full
+unsigned int const currentBg = 3, buffSize = 2048; // normal mode: alt-n cross + color                                                                                        // st -meta-vim-full
 /// Enable double / triple click yanking / selection of word / line.                                                                                                            // st -meta-vim-full
 int const mouseYank = 1, mouseSelect = 1;                                                                                                                                       // st -meta-vim-full
 /// [Vim Browse] Colors for search results currently on screen.                                                                                                                 // st -meta-vim-full
-unsigned int const highlightBg = 2, highlightFg = 3;                                                                                                                            // st -meta-vim-full
+unsigned int const highlightBg = 6, highlightFg = 257;                                                                                                                          // st -meta-vim-full
 char const wDelS[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", wDelL[] = " \t";                                                                                                      // st -meta-vim-full
  //< Shortcusts executed in normal mode                                                                                                                                         // st -meta-vim-full
 char *nmKeys [] = { "R/Building\nN", "r/Building\n", "X/juli@machine\nN", "x/juli@machine\n", "Q?[Leaving vim, starting execution]\n","F/: error:\nN", "f/: error:\n", "DQf" }; // st -meta-vim-full
@@ -173,7 +173,7 @@ static unsigned int rows = 24;
  */
 static unsigned int mouseshape = XC_xterm;
 static unsigned int mousefg = 5;
-static unsigned int mousebg = 3;
+static unsigned int mousebg = 6;
 
 /*
  * Color used to display font attributes when fontconfig selected a font which
