@@ -5,8 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
-// static char *font = "Liberation Mono:pixelsize=22:antialias=true:autohint=true";
+// static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";
+static char *font = "Liberation Mono:pixelsize=24:antialias=true:autohint=true";
 static int borderpx = 0;
 
 /*
@@ -96,7 +96,8 @@ unsigned int tabspaces = 4;
 
 /* bg opacity */
 // float alpha = 0.96, alphaUnfocused = 0.81;
-float alpha = 0.84, alphaUnfocused = 0.78;
+// float alpha = 0.81, alphaUnfocused = 0.64;
+float alpha = 0.32, alphaUnfocused = 0.08;
 // float alpha = 0.08, alphaUnfocused = 0.16;
 
 static const char *colorname[] = {
