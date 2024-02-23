@@ -5,8 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";     // thinkpad
-// static char *font = "Liberation Mono:pixelsize=24:antialias=true:autohint=true";  // alienware
+// static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";     // thinkpad
+static char *font = "Liberation Mono:pixelsize=24:antialias=true:autohint=true";  // alienware
 static int borderpx = 0;
 
 /*
@@ -96,7 +96,7 @@ unsigned int tabspaces = 4;
 
 /* bg opacity */
 // float alpha = 0.96, alphaUnfocused = 0.81;
-float alpha = 0.81, alphaUnfocused = 0.68;
+float alpha = 0.82, alphaUnfocused = 0.76;
 // float alpha = 0.16, alphaUnfocused = 0.08;
 
 static const char *colorname[] = {
