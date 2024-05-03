@@ -6,7 +6,8 @@
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
 // static char *font = "Liberation Mono:pixelsize=17:antialias=true:autohint=true";     // thinkpad
-static char *font = "Liberation Mono:pixelsize=24:antialias=true:autohint=true";  // alienware
+// static char *font = "Liberation Mono:pixelsize=24:antialias=true:autohint=true";     // alienware
+static char *font = "Liberation Mono:pixelsize=26:antialias=true:autohint=true";  // alienware
 static int borderpx = 0;
 
 /*
@@ -95,7 +96,7 @@ char *termname = "st-256color";
 unsigned int tabspaces = 4;
 
 /* bg opacity */
-// float alpha = 0.96, alphaUnfocused = 0.81;
+// float alpha = 1, alphaUnfocused = 1;
 float alpha = 0.82, alphaUnfocused = 0.76;
 // float alpha = 0.16, alphaUnfocused = 0.08;
 
@@ -133,10 +134,10 @@ static const char *colorname[] = {
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-// unsigned int defaultfg = 257; // foreground color: font color
-unsigned int defaultfg = 6; // foreground color: font color
+// unsigned int defaultfg = 257;      // foreground color: font color
+unsigned int defaultfg = 15;          // foreground color: font color
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 6;  // cursor color
+unsigned int defaultcs = 6;           // cursor color
 static unsigned int defaultrcs = 0;
 unsigned int bg = 0, bgUnfocused = 0; // focus st color and unfocus st color                                                                                                    // st-focus
 unsigned int const currentBg = 3, buffSize = 2048; // normal mode: alt-n cross + color                                                                                        // st -meta-vim-full
