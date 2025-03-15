@@ -95,7 +95,7 @@ unsigned int tabspaces = 4;
 
 /* bg opacity */
 // float alpha = 1, alphaUnfocused = 1;
-float alpha = 0.96, alphaUnfocused = 0.88;
+float alpha = 0.82, alphaUnfocused = 0.618;
 // float alpha = 0.16, alphaUnfocused = 0.08;
 
 static const char *colorname[] = {
