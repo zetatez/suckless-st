@@ -5,8 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=32:antialias=true:autohint=true";
-// static char *font = "Liberation Mono:pixelsize=24:antialias=true:autohint=true";
+// static char *font = "Liberation Mono:pixelsize=32:antialias=true:autohint=true";
+static char *font = "Liberation Mono:pixelsize=30:antialias=true:autohint=true";
 static int borderpx = 0;
 
 /*
@@ -127,7 +127,8 @@ static const char *colorname[] = {
   /* more colors can be added after 255 to use with DefaultXX */
   /* 256-257 */
   "#2e3440", /* background */
-  "#8c929e", /* foreground (gray) */
+  // "#8c929e", /* foreground (gray) */
+  "#adb5bd", /* foreground (gray) */
 };
 
 
