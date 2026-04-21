@@ -97,7 +97,7 @@ unsigned int tabspaces = 4;
 /* bg opacity */
 // float alpha = 1, alphaUnfocused = 1;
 
-float alpha = 0.86, alphaUnfocused = 0.75;
+float alpha = 0.84, alphaUnfocused = 0.74;
 // float alpha = 0.82, alphaUnfocused = 0.618;
 // float alpha = 0.16, alphaUnfocused = 0.08;
 
