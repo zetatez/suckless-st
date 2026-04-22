@@ -97,7 +97,7 @@ unsigned int tabspaces = 4;
 /* bg opacity */
 // float alpha = 1, alphaUnfocused = 1;
 
-float alpha = 0.94, alphaUnfocused = 0.78;
+float alpha = 0.88, alphaUnfocused = 0.78;
 // float alpha = 0.82, alphaUnfocused = 0.618;
 // float alpha = 0.16, alphaUnfocused = 0.08;
 
@@ -127,8 +127,7 @@ static const char *colorname[] = {
   /* more colors can be added after 255 to use with DefaultXX */
   /* 256-257 */
   "#2e3440", /* background */
-  // "#8c929e", /* foreground (gray) */
-  "#adb5bd", /* foreground (gray) */
+  "#e9ecef", /* foreground (gray) */
 };
 
 
