@@ -884,7 +884,7 @@ xloadcols(void)
 int
 xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b)
 {
-	if (!BETWEEN(x, 0, dc.collen))
+	if (!BETWEEN(x, 0, dc.collen - 1))
 		return 1;
 
 	*r = dc.col[x].color.red >> 8;
@@ -899,7 +899,7 @@ xsetcolorname(int x, const char *name)
 {
 	Color ncolor;
 
-	if (!BETWEEN(x, 0, dc.collen))
+	if (!BETWEEN(x, 0, dc.collen - 1))
 		return 1;
 
 	if (!xloadcolor(x, name, &ncolor))
@@ -1197,7 +1197,7 @@ xinit(int cols, int rows)
 {
 	XGCValues gcvalues;
 	Cursor cursor;
-	Window parent;
+	Window parent, root;
 	pid_t thispid = getpid();
 	XColor xmousefg, xmousebg;
 	XWindowAttributes attr;                                               // st-focus
@@ -1248,22 +1248,21 @@ xinit(int cols, int rows)
 		| ButtonMotionMask | ButtonPressMask | ButtonReleaseMask;
 	xw.attrs.colormap = xw.cmap;
 
-// 	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))            // st-focus
-// 		parent = XRootWindow(xw.dpy, xw.scr);                             // st-focus
-	xw.win = XCreateWindow(xw.dpy, parent, xw.l, xw.t,
-// 			win.w, win.h, 0, XDefaultDepth(xw.dpy, xw.scr), InputOutput,  // st-focus
+	root = XRootWindow(xw.dpy, xw.scr);
+	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))
+		parent = root;
+	xw.win = XCreateWindow(xw.dpy, root, xw.l, xw.t,
 			win.w, win.h, 0, xw.depth, InputOutput,                       // st-focus
 			xw.vis, CWBackPixel | CWBorderPixel | CWBitGravity
 			| CWEventMask | CWColormap, &xw.attrs);
+	if (parent != root)
+		XReparentWindow(xw.dpy, xw.win, parent, xw.l, xw.t);
 
 	memset(&gcvalues, 0, sizeof(gcvalues));
 	gcvalues.graphics_exposures = False;
-// 	dc.gc = XCreateGC(xw.dpy, parent, GCGraphicsExposures,                // st-focus
-// 			&gcvalues);                                                   // st-focus
-// 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,                  // st-focus
-// 			DefaultDepth(xw.dpy, xw.scr));                                // st-focus
+	dc.gc = XCreateGC(xw.dpy, xw.win, GCGraphicsExposures,
+			&gcvalues);
 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h, xw.depth);       // st-focus
-	dc.gc = XCreateGC(xw.dpy, xw.buf, GCGraphicsExposures, &gcvalues);    // st-focus
 	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg].pixel);
 	XFillRectangle(xw.dpy, xw.buf, dc.gc, 0, 0, win.w, win.h);
 
@@ -1704,6 +1703,9 @@ xseticontitle(char *p)
 	XTextProperty prop;
 	DEFAULT(p, opt_title);
 
+	if (p[0] == '\0')
+		p = opt_title;
+
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 	                                &prop) != Success)
 		return;
@@ -1717,6 +1719,9 @@ xsettitle(char *p)
 {
 	XTextProperty prop;
 	DEFAULT(p, opt_title);
+
+	if (p[0] == '\0')
+		p = opt_title;
 
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 	                                &prop) != Success)

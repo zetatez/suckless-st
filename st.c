@@ -1113,6 +1113,9 @@ tsetdirt(int top, int bot)
 {
 	int i;
 
+	if (term.row <= 0)
+		return;
+
 	LIMIT(top, 0, term.row-1);
 	LIMIT(bot, 0, term.row-1);
 
@@ -1248,7 +1251,7 @@ tscrollup(int orig, int n)
 void
 selscroll(int orig, int n)
 {
-	if (sel.ob.x == -1)
+	if (sel.ob.x == -1 || sel.alt != IS_SET(MODE_ALTSCREEN))
 		return;
 
 	if (BETWEEN(sel.nb.y, orig, term.bot) != BETWEEN(sel.ne.y, orig, term.bot)) {
@@ -1283,6 +1286,7 @@ csiparse(void)
 {
 	char *p = csiescseq.buf, *np;
 	long int v;
+	int sep = ';'; /* colon or semi-colon, but not both */
 
 	csiescseq.narg = 0;
 	if (*p == '?') {
@@ -1300,7 +1304,9 @@ csiparse(void)
 			v = -1;
 		csiescseq.arg[csiescseq.narg++] = v;
 		p = np;
-		if (*p != ';' || csiescseq.narg == ESC_ARG_SIZ)
+		if (sep == ';' && *p == ':')
+			sep = ':'; /* allow override to colon once */
+		if (*p != sep || csiescseq.narg == ESC_ARG_SIZ)
 			break;
 		p++;
 	}
@@ -1570,15 +1576,21 @@ tsetattr(const int *attr, int l)
 			if ((idx = tdefcolor(attr, &i, l)) >= 0)
 				term.c.attr.fg = idx;
 			break;
-		case 39:
+		case 39: /* set foreground color to default */
 			term.c.attr.fg = defaultfg;
 			break;
 		case 48:
 			if ((idx = tdefcolor(attr, &i, l)) >= 0)
 				term.c.attr.bg = idx;
 			break;
-		case 49:
+		case 49: /* set background color to default */
 			term.c.attr.bg = defaultbg;
+			break;
+		case 58:
+			/* This starts a sequence to change the color of
+			 * "underline" pixels. We don't support that and
+			 * instead eat up a following "5;n" or "2;r;g;b". */
+			tdefcolor(attr, &i, l);
 			break;
 		default:
 			if (BETWEEN(attr[i], 30, 37)) {
@@ -1676,7 +1688,7 @@ tsetmode(int priv, int set, const int *args, int narg)
 			case 1006: /* 1006: extended reporting mode */
 				xsetmode(set, MODE_MOUSESGR);
 				break;
-			case 1034:
+			case 1034: /* 1034: enable 8-bit mode for keyboard input */
 				xsetmode(set, MODE_8BIT);
 				break;
 			case 1049: /* swap screen & set/restore cursor as xterm */
@@ -1684,8 +1696,8 @@ tsetmode(int priv, int set, const int *args, int narg)
 					break;
 				tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
 				/* FALLTHROUGH */
-			case 47: /* swap screen */
-			case 1047:
+			case 47: /* swap screen buffer */
+			case 1047: /* swap screen buffer */
 				if (!allowaltscreen)
 					break;
 				alt = IS_SET(MODE_ALTSCREEN);
@@ -1698,7 +1710,7 @@ tsetmode(int priv, int set, const int *args, int narg)
 				if (*args != 1049)
 					break;
 				/* FALLTHROUGH */
-			case 1048:
+			case 1048: /* save/restore cursor (like DECSC/DECRC) */
 				tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
 				break;
 			case 2004: /* 2004: bracketed paste mode */
@@ -1796,7 +1808,7 @@ csihandle(void)
 			ttywrite(vtiden, strlen(vtiden), 0);
 		break;
 	case 'b': /* REP -- if last char is printable print it <n> more times */
-		DEFAULT(csiescseq.arg[0], 1);
+		LIMIT(csiescseq.arg[0], 1, 65535);
 		if (term.lastc)
 			while (csiescseq.arg[0]-- > 0)
 				tputc(term.lastc);
@@ -1855,7 +1867,7 @@ csihandle(void)
 			}
 			break;
 		case 1: /* above */
-			if (term.c.y > 1)
+			if (term.c.y > 0)
 				tclearregion(0, 0, term.col-1, term.c.y-1);
 			tclearregion(0, term.c.y, term.c.x, term.c.y);
 			break;
@@ -1881,6 +1893,7 @@ csihandle(void)
 		}
 		break;
 	case 'S': /* SU -- Scroll <n> line up */
+		if (csiescseq.priv) break;
 		DEFAULT(csiescseq.arg[0], 1);
 		tscrollup(term.top, csiescseq.arg[0]);
 		break;
@@ -1922,18 +1935,19 @@ csihandle(void)
 	case 'm': /* SGR -- Terminal attribute (color) */
 		tsetattr(csiescseq.arg, csiescseq.narg);
 		break;
-	case 'n': /* DSR – Device Status Report */
+	case 'n': /* DSR -- Device Status Report */
 		switch (csiescseq.arg[0]) {
 		case 0:
-		case 5:
-			len = snprintf(buf, sizeof(buf), "\033[0n");
-			ttywrite(buf, len, 0);
+		case 5: /* Status Report "OK" `0n` */
+			ttywrite("\033[0n", sizeof("\033[0n") - 1, 0);
 			break;
-		case 6:
+		case 6: /* Report Cursor Position (CPR) "<row>;<column>R" */
 			len = snprintf(buf, sizeof(buf), "\033[%i;%iR",
-					term.c.y+1, term.c.x+1);
+			               term.c.y+1, term.c.x+1);
 			ttywrite(buf, len, 0);
 			break;
+		default:
+			goto unknown;
 		}
 		break;
 	case 'r': /* DECSTBM -- Set Scrolling Region */
@@ -1950,7 +1964,11 @@ csihandle(void)
 		tcursor(CURSOR_SAVE);
 		break;
 	case 'u': /* DECRC -- Restore cursor position (ANSI.SYS) */
-		tcursor(CURSOR_LOAD);
+		if (csiescseq.priv) {
+			goto unknown;
+		} else {
+			tcursor(CURSOR_LOAD);
+		}
 		break;
 	case ' ':
 		switch (csiescseq.mode[1]) {
@@ -2052,7 +2070,7 @@ strhandle(void)
 			if (narg > 1)
 				xsettitle(strescseq.args[1]);
 			return;
-		case 52:
+		case 52: /* manipulate selection data */
 			if (narg > 2 && allowwindowops) {
 				dec = base64dec(strescseq.args[2]);
 				if (dec) {
@@ -2063,9 +2081,9 @@ strhandle(void)
 				}
 			}
 			return;
-		case 10:
-		case 11:
-		case 12:
+		case 10: /* set dynamic VT100 text foreground color */
+		case 11: /* set dynamic VT100 text background color */
+		case 12: /* set dynamic text cursor color */
 			if (narg < 2)
 				break;
 			p = strescseq.args[1];
@@ -2092,8 +2110,10 @@ strhandle(void)
 			if (p && !strcmp(p, "?")) {
 				osc_color_response(j, 0, 1);
 			} else if (xsetcolorname(j, p)) {
-				if (par == 104 && narg <= 1)
+				if (par == 104 && narg <= 1) {
+					xloadcols();
 					return; /* color reset without parameter */
+				}
 				fprintf(stderr, "erresc: invalid color j=%d, p=%s\n",
 				        j, p ? p : "(null)");
 			} else {
@@ -2101,6 +2121,19 @@ strhandle(void)
 				 * TODO if defaultbg color is changed, borders
 				 * are dirty
 				 */
+				tfulldirt();
+			}
+			return;
+		case 110: /* reset dynamic VT100 text foreground color */
+		case 111: /* reset dynamic VT100 text background color */
+		case 112: /* reset dynamic text cursor color */
+			if (narg != 1)
+				break;
+			if ((j = par - 110) < 0 || j >= LEN(osc_table))
+				break; /* shouldn't be possible */
+			if (xsetcolorname(osc_table[j].idx, NULL)) {
+				fprintf(stderr, "erresc: %s color not found\n", osc_table[j].str);
+			} else {
 				tfulldirt();
 			}
 			return;
@@ -2481,6 +2514,8 @@ eschandle(uchar ascii)
 		treset();
 		resettitle();
 		xloadcols();
+		xsetmode(0, MODE_HIDE);
+		xsetmode(0, MODE_BRCKTPASTE);
 		break;
 	case '=': /* DECPAM -- Application keypad */
 		xsetmode(1, MODE_APPKEYPAD);
@@ -2573,6 +2608,9 @@ check_control_code:
 	 * they must not cause conflicts with sequences.
 	 */
 	if (control) {
+		/* in UTF-8 mode ignore handling C1 control characters */
+		if (IS_SET(MODE_UTF8) && ISCONTROLC1(u))
+			return;
 		tcontrolcode(u);
 		/*
 		 * control codes are not shown ever
@@ -2619,11 +2657,16 @@ check_control_code:
 		gp = &term.line[term.c.y][term.c.x];
 	}
 
-	if (IS_SET(MODE_INSERT) && term.c.x+width < term.col)
+	if (IS_SET(MODE_INSERT) && term.c.x+width < term.col) {
 		memmove(gp+width, gp, (term.col - term.c.x - width) * sizeof(Glyph));
+		gp->mode &= ~ATTR_WIDE;
+	}
 
 	if (term.c.x+width > term.col) {
-		tnewline(1);
+		if (IS_SET(MODE_WRAP))
+			tnewline(1);
+		else
+			tmoveto(term.col - width, term.c.y);
 		gp = &term.line[term.c.y][term.c.x];
 	}
 
