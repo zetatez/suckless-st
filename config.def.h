@@ -138,7 +138,7 @@ static const char *colorname[] = {
 // unsigned int defaultfg = 257;      // foreground color: font color
 unsigned int defaultfg = 257;          // foreground color: font color (gray-white)
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 6;           // cursor color
+unsigned int defaultcs = 14;           // cursor color
 static unsigned int defaultrcs = 0;
 unsigned int bg = 0, bgUnfocused = 0; // focus st color and unfocus st color                                                                                                    // st-focus
 unsigned int const currentBg = 3, buffSize = 2048; // normal mode: alt-n cross + color                                                                                        // st -meta-vim-full
