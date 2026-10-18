@@ -252,7 +252,7 @@ static Shortcut shortcuts[] = {
  * If you want keys other than the X11 function keys (0xFD00 - 0xFFFF)
  * to be mapped below, add them to this array.
  */
-static KeySym mappedkeys[] = { -1 };
+static KeySym mappedkeys[] = { XK_0, XK_1, XK_2, XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9 };
 
 /*
  * State bits to ignore when matching key or button events.  By default,
@@ -357,6 +357,20 @@ static Key key[] = {
 	{ XK_Right,ShiftMask|ControlMask|Mod1Mask,"\033[1;8C",0,   0},
 	{ XK_Right,         XK_ANY_MOD,     "\033[C",        0,   -1},
 	{ XK_Right,         XK_ANY_MOD,     "\033OC",        0,   +1},
+	/* Ctrl+Tab / Ctrl+Shift+Tab in xterm modifyOtherKeys form, so TUIs can tell them apart */
+	{ XK_Tab,           ControlMask,    "\033[27;5;9~",  0,    0},
+	{ XK_ISO_Left_Tab,  ControlMask|ShiftMask,"\033[27;6;9~",0,  0},
+	/* Ctrl+1..Ctrl+0 in xterm modifyOtherKeys form (used e.g. by opencode to switch tabs) */
+	{ XK_1,             ControlMask,    "\033[27;5;49~", 0,    0},
+	{ XK_2,             ControlMask,    "\033[27;5;50~", 0,    0},
+	{ XK_3,             ControlMask,    "\033[27;5;51~", 0,    0},
+	{ XK_4,             ControlMask,    "\033[27;5;52~", 0,    0},
+	{ XK_5,             ControlMask,    "\033[27;5;53~", 0,    0},
+	{ XK_6,             ControlMask,    "\033[27;5;54~", 0,    0},
+	{ XK_7,             ControlMask,    "\033[27;5;55~", 0,    0},
+	{ XK_8,             ControlMask,    "\033[27;5;56~", 0,    0},
+	{ XK_9,             ControlMask,    "\033[27;5;57~", 0,    0},
+	{ XK_0,             ControlMask,    "\033[27;5;48~", 0,    0},
 	{ XK_ISO_Left_Tab,  ShiftMask,      "\033[Z",        0,    0},
 	{ XK_Return,        Mod1Mask,       "\033\r",        0,    0},
 	{ XK_Return,        XK_ANY_MOD,     "\r",            0,    0},
