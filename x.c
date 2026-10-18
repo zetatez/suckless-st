@@ -1248,10 +1248,10 @@ xinit(int cols, int rows)
 		| ButtonMotionMask | ButtonPressMask | ButtonReleaseMask;
 	xw.attrs.colormap = xw.cmap;
 
-// 	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))            // st-focus
-// 		parent = XRootWindow(xw.dpy, xw.scr);                             // st-focus
-	xw.win = XCreateWindow(xw.dpy, parent, xw.l, xw.t,
-// 			win.w, win.h, 0, XDefaultDepth(xw.dpy, xw.scr), InputOutput,  // st-focus
+	root = XRootWindow(xw.dpy, xw.scr);
+	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))
+		parent = root;
+	xw.win = XCreateWindow(xw.dpy, root, xw.l, xw.t,
 			win.w, win.h, 0, xw.depth, InputOutput,                       // st-focus
 			xw.vis, CWBackPixel | CWBorderPixel | CWBitGravity
 			| CWEventMask | CWColormap, &xw.attrs);
@@ -1260,12 +1260,9 @@ xinit(int cols, int rows)
 
 	memset(&gcvalues, 0, sizeof(gcvalues));
 	gcvalues.graphics_exposures = False;
-// 	dc.gc = XCreateGC(xw.dpy, parent, GCGraphicsExposures,                // st-focus
-// 			&gcvalues);                                                   // st-focus
-// 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,                  // st-focus
-// 			DefaultDepth(xw.dpy, xw.scr));                                // st-focus
+	dc.gc = XCreateGC(xw.dpy, xw.win, GCGraphicsExposures,
+			&gcvalues);
 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h, xw.depth);       // st-focus
-	dc.gc = XCreateGC(xw.dpy, xw.buf, GCGraphicsExposures, &gcvalues);    // st-focus
 	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg].pixel);
 	XFillRectangle(xw.dpy, xw.buf, dc.gc, 0, 0, win.w, win.h);
 
@@ -1955,11 +1952,12 @@ kpress(XEvent *ev)
 			return;
 	} else {
 		len = XLookupString(e, buf, sizeof buf, &ksym, NULL);
-	if (IS_SET(MODE_NORMAL)) {                                                             // st-meta-vim-full
-		if (kPressHist(buf, len, match(ControlMask, e->state), &ksym)                      // st-meta-vim-full
-		                                      == finish) normalMode();                     // st-meta-vim-full
-		return;                                                                            // st-meta-vim-full
-	}                                                                                      // st-meta-vim-full
+	}
+	if (IS_SET(MODE_NORMAL)) {                                       // st-meta-vim-full
+		if (kPressHist(buf, len, match(ControlMask, e->state), &ksym)  // st-meta-vim-full
+		                                      == finish) normalMode(); // st-meta-vim-full
+		return;                                                        // st-meta-vim-full
+	}                                                                // st-meta-vim-full
 	/* 1. shortcuts */
 	for (bp = shortcuts; bp < shortcuts + LEN(shortcuts); bp++) {
 		if (ksym == bp->keysym && match(bp->mod, e->state)) {
