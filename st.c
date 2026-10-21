@@ -20,6 +20,7 @@
 
 #include "st.h"
 #include "win.h"
+#include "kittygfx.h"
 
 #if   defined(__linux)
  #include <pty.h>
@@ -36,6 +37,7 @@
 #define ESC_ARG_SIZ   16
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
+#define KITTY_STACK_MAX 32
 
 /* macros */
 #define IS_SET(flag)		((term.mode & (flag)) != 0)
@@ -141,6 +143,7 @@ typedef struct {
 	char buf[ESC_BUF_SIZ]; /* raw string */
 	size_t len;            /* raw string length */
 	char priv;
+	char privch;           /* private prefix byte ('?', '>', '<', '=') */
 	int arg[ESC_ARG_SIZ];
 	int narg;              /* nb of args */
 	char mode[2];
@@ -206,6 +209,8 @@ static void tdefutf8(char);
 static int32_t tdefcolor(const int *, int *, int);
 static void tdeftran(char);
 static void tstrsequence(uchar);
+static void tkittykeyboard(char, const int *, int);
+static void tkittyreset(void);
 
 static void drawregion(int, int, int, int);
 
@@ -228,6 +233,9 @@ static Term term;
 static Selection sel;
 static CSIEscape csiescseq;
 static STREscape strescseq;
+static int kittyflags[2];                 /* [main, alternate] */
+static int kittystack[2][KITTY_STACK_MAX];
+static int kittystacklen[2];
 static int iofd = 1;
 static int cmdfd;
 static pid_t pid;
@@ -1170,12 +1178,14 @@ treset(void)
 		.bg = defaultbg
 	}, .x = 0, .y = 0, .state = CURSOR_DEFAULT};
 
+	gfx_reset();
 	memset(term.tabs, 0, term.col * sizeof(*term.tabs));
 	for (i = tabspaces; i < term.col; i += tabspaces)
 		term.tabs[i] = 1;
 	term.top = 0;
 	term.bot = term.row - 1;
 	term.mode = MODE_WRAP|MODE_UTF8;
+	tkittyreset();
 	memset(term.trantbl, CS_USA, sizeof(term.trantbl));
 	term.charset = 0;
 
@@ -1203,17 +1213,102 @@ tswapscreen(void)
 	term.line = term.alt;
 	term.alt = tmp;
 	term.mode ^= MODE_ALTSCREEN;
+	gfx_set_screen(IS_SET(MODE_ALTSCREEN) ? 1 : 0);
+	/* The alternate screen is cleared on entry and discarded on exit. */
+	gfx_clear_screen(1);
 	tfulldirt();
+}
+
+static int
+tkittycurrent(void)
+{
+	return IS_SET(MODE_ALTSCREEN) ? 1 : 0;
+}
+
+int
+ttykittyflags(void)
+{
+	return kittyflags[tkittycurrent()];
+}
+
+static void
+tkittyreset(void)
+{
+	memset(kittyflags, 0, sizeof(kittyflags));
+	memset(kittystacklen, 0, sizeof(kittystacklen));
+}
+
+/*
+ * Kitty keyboard protocol progressive enhancement state:
+ *   CSI > flags u    push current flags, set flags
+ *   CSI < number u   pop number entries, restoring the previous flags
+ *   CSI = flags;mode u  set/update flags
+ *   CSI ? u          report current flags
+ */
+static void
+tkittykeyboard(char prefix, const int *args, int narg)
+{
+	int n, mode, screen = tkittycurrent();
+	int *flags = &kittyflags[screen];
+	int *stack = kittystack[screen];
+	int *len = &kittystacklen[screen];
+	char buf[32];
+
+	switch (prefix) {
+	case '>':
+		if (*len == KITTY_STACK_MAX) {
+			memmove(stack, stack + 1,
+				(KITTY_STACK_MAX - 1) * sizeof(*stack));
+			(*len)--;
+		}
+		stack[(*len)++] = *flags;
+		*flags = ((narg > 0 ? args[0] : 0) & KITTY_FLAG_DISAMBIGUATE);
+		break;
+	case '<':
+		n = (narg > 0 && args[0] > 0) ? args[0] : 1;
+		if (n >= *len) {
+			*len = 0;
+			*flags = 0;
+		} else {
+			while (n-- > 0)
+				*flags = stack[--(*len)];
+		}
+		break;
+	case '=':
+		n = (narg > 0 ? args[0] : 0) & KITTY_FLAG_DISAMBIGUATE;
+		mode = narg > 1 ? args[1] : 1;
+		switch (mode) {
+		case 1:
+			*flags = n;
+			break;
+		case 2:
+			*flags |= n;
+			break;
+		case 3:
+			*flags &= ~n;
+			break;
+		}
+		break;
+	case '?':
+		n = snprintf(buf, sizeof(buf), "\033[?%du", *flags);
+		if (n > 0)
+			ttywrite(buf, n, 0);
+		break;
+	}
 }
 
 void
 tscrolldown(int orig, int n)
 {
-	if (!orig && historyBufferScroll(-n)) return;                                                      // st-meta-vim-full
+	if (!orig && historyBufferScroll(-n)) {                                                            // st-meta-vim-full
+		if (!histOp) gfx_scroll(tkittycurrent(), 0, term.row - 1, -n);                                 // st-meta-vim-full
+		return;
+	}
 	int i;
 	Line temp;
 
 	LIMIT(n, 0, term.bot-orig+1);
+	gfx_scroll(tkittycurrent(), orig, term.bot, -n);
 
 	tsetdirt(orig, term.bot-n);
 	tclearregion(0, term.bot-n+1, term.col-1, term.bot);
@@ -1230,11 +1325,15 @@ tscrolldown(int orig, int n)
 void
 tscrollup(int orig, int n)
 {
-	if (!orig && historyBufferScroll(n)) return;                                                       // st-meta-vim-full
+	if (!orig && historyBufferScroll(n)) {                                                             // st-meta-vim-full
+		if (!histOp) gfx_scroll(tkittycurrent(), 0, term.row - 1, n);                                  // st-meta-vim-full
+		return;
+	}
 	int i;
 	Line temp;
 
 	LIMIT(n, 0, term.bot-orig+1);
+	gfx_scroll(tkittycurrent(), orig, term.bot, n);
 
 	tclearregion(0, orig, term.col-1, orig+n-1);
 	tsetdirt(orig+n, term.bot);
@@ -1289,8 +1388,9 @@ csiparse(void)
 	int sep = ';'; /* colon or semi-colon, but not both */
 
 	csiescseq.narg = 0;
-	if (*p == '?') {
-		csiescseq.priv = 1;
+	if (*p == '?' || *p == '>' || *p == '<' || *p == '=') {
+		csiescseq.privch = *p;
+		csiescseq.priv = (*p == '?');
 		p++;
 	}
 
@@ -1372,6 +1472,7 @@ tsetchar(Rune u, const Glyph *attr, int x, int y)
 	term.dirty[y] = 1;
 	term.line[y][x] = *attr;
 	term.line[y][x].u = u;
+	term.line[y][x].img = 0;
 }
 
 void
@@ -1402,6 +1503,7 @@ tclearregion(int x1, int y1, int x2, int y2)
 			gp->bg = term.c.attr.bg;
 			gp->mode = 0;
 			gp->u = ' ';
+			gp->img = 0;
 		}
 	}
 }
@@ -1861,10 +1963,9 @@ csihandle(void)
 		switch (csiescseq.arg[0]) {
 		case 0: /* below */
 			tclearregion(term.c.x, term.c.y, term.col-1, term.c.y);
-			if (term.c.y < term.row-1) {
+			if (term.c.y < term.row-1)
 				tclearregion(0, term.c.y+1, term.col-1,
 						term.row-1);
-			}
 			break;
 		case 1: /* above */
 			if (term.c.y > 0)
@@ -1873,6 +1974,7 @@ csihandle(void)
 			break;
 		case 2: /* all */
 			tclearregion(0, 0, term.col-1, term.row-1);
+			gfx_clear_screen(tkittycurrent());
 			break;
 		default:
 			goto unknown;
@@ -1964,7 +2066,11 @@ csihandle(void)
 		tcursor(CURSOR_SAVE);
 		break;
 	case 'u': /* DECRC -- Restore cursor position (ANSI.SYS) */
-		if (csiescseq.priv) {
+		if (csiescseq.privch == '>' || csiescseq.privch == '<' ||
+		    csiescseq.privch == '=' || csiescseq.privch == '?') {
+			tkittykeyboard(csiescseq.privch, csiescseq.arg,
+					csiescseq.narg);
+		} else if (csiescseq.priv) {
 			goto unknown;
 		} else {
 			tcursor(CURSOR_LOAD);
@@ -2050,6 +2156,29 @@ strhandle(void)
 	};
 
 	term.esc &= ~(ESC_STR_END|ESC_STR);
+	if (strescseq.type == '_' && strescseq.len > 0 &&
+	    strescseq.buf[0] == 'G') {
+		GfxResult res;
+
+		memset(&res, 0, sizeof(res));
+		if (gfx_apc(strescseq.buf, strescseq.len, tkittycurrent(),
+		            term.c.x, term.c.y, term.col, &res)) {
+			if (res.move) {
+				int x = res.col, y = res.row;
+
+				if (x >= term.col) {
+					x = 0;
+					y++;
+				}
+				LIMIT(x, 0, term.col - 1);
+				LIMIT(y, 0, term.row - 1);
+				tmoveto(x, y);
+			}
+			if (res.dirty)
+				tfulldirt();
+		}
+		return;
+	}
 	strparse();
 	par = (narg = strescseq.narg) ? atoi(strescseq.args[0]) : 0;
 
@@ -2541,12 +2670,17 @@ eschandle(uchar ascii)
 	return 1;
 }
 
+static int img_pending;
+static int img_pending_x, img_pending_y, img_pending_marks;
+
 void
 tputc(Rune u)
 {
 	char c[UTF_SIZ];
 	int control;
-	int width, len;
+	int width = 1, len;
+	int placeholder;
+	uint16_t mark;
 	Glyph *gp;
 
 	control = ISCONTROL(u);
@@ -2558,6 +2692,13 @@ tputc(Rune u)
 		if (!control && (width = wcwidth(u)) == -1)
 			width = 1;
 	}
+
+	placeholder = (u == GFX_PLACEHOLDER_CHAR);
+	mark = u >= 0x300 ? gfx_diacritic_num(u) : 0;
+	if (placeholder)
+		width = 1;
+	else if (mark)
+		width = 0;
 
 	if (IS_SET(MODE_PRINT))
 		tprinter(c, len);
@@ -2647,6 +2788,36 @@ check_control_code:
 		 */
 		return;
 	}
+	/* The row/column/id of a Unicode placeholder is encoded in combining
+	 * diacritics that follow it. Consume them here so they do not
+	 * overwrite the placeholder cell itself. */
+	if (mark && img_pending &&
+	    (term.line[img_pending_y][img_pending_x].mode & ATTR_IMAGE)) {
+		Glyph *ig = &term.line[img_pending_y][img_pending_x];
+		uint32_t v = (uint32_t)mark - 1;
+
+		switch (img_pending_marks) {
+		case 0:
+			ig->img = (ig->img & ~(0x1ffu << 18)) |
+			          ((v & 0x1ff) << 18);
+			break;
+		case 1:
+			ig->img = (ig->img & ~(0x1ffu << 9)) |
+			          ((v & 0x1ff) << 9);
+			break;
+		case 2:
+			ig->img = (ig->img & ~0x1ffu) |
+			          (v & 0x1ff);
+			break;
+		default:
+			break;
+		}
+		if (img_pending_marks < 3)
+			img_pending_marks++;
+		return;
+	}
+	if (!placeholder)
+		img_pending = 0;
 //	if (selected(term.c.x, term.c.y))                                                                  // st-meta-vim-full
 //		selclear();                                                                                      // st-meta-vim-full
 
@@ -2673,6 +2844,17 @@ check_control_code:
 	tsetchar(u, &term.c.attr, term.c.x, term.c.y);
 	term.lastc = u;
 
+	if (placeholder) {
+		gp = &term.line[term.c.y][term.c.x];
+		gp->mode |= ATTR_IMAGE;
+		gp->img = GFX_IMG_PACK(GFX_IMG_COORD_UNSET,
+		                       GFX_IMG_COORD_UNSET,
+		                       GFX_IMG_COORD_UNSET);
+		img_pending = 1;
+		img_pending_x = term.c.x;
+		img_pending_y = term.c.y;
+		img_pending_marks = 0;
+	}
 	if (width == 2) {
 		gp->mode |= ATTR_WIDE;
 		if (term.c.x+1 < term.col) {
@@ -2849,6 +3031,7 @@ drawregion(int x1, int y1, int x2, int y2)
 		int const oy = o ? (y + insertOff - histOff + h) % h : y;                                        // st-meta-vim-full
 		if (!BETWEEN(oy, 0, term.row-1) || !term.dirty[y]) continue;                                     // st-meta-vim-full
 		xdrawline(term.line[y], x1, oy, x2);                                                             // st-meta-vim-full
+		xdrawimages_line(term.line[y], oy, x1, x2);                                                      // st-meta-vim-full
 	}
 	memset(&term.dirty[y1], 0, sizeof(*term.dirty) * (y2 - y1));
 }
@@ -2875,6 +3058,11 @@ draw(void)
 
 	xdrawcursor(cx, term.c.y, term.line[term.c.y][cx],
 			term.ocx, term.ocy, term.line[term.ocy][term.ocx]);
+	/* The old cursor cell is repainted as text; if it showed an image
+	 * placeholder, put the image fragment back under the cursor. */
+	if (!histMode && (term.line[term.ocy][term.ocx].mode & ATTR_IMAGE))
+		xdrawimages_cell(term.line[term.ocy], term.ocy,
+		                 term.ocx, 0, term.col);
 	term.ocx = cx;
 	term.ocy = term.c.y;
 	xfinishdraw();

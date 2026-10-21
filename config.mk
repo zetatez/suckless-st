@@ -19,7 +19,7 @@ INCS = -I$(X11INC) \
 
 # - LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \                  # st-focus
 # + LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft lXrender \         # st-focus
-LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft -lXrender\
+LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft -lXrender -lpng -lz\
        `$(PKG_CONFIG) --libs fontconfig` \
        `$(PKG_CONFIG) --libs freetype2`
 

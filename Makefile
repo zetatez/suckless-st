@@ -4,7 +4,7 @@
 
 include config.mk
 
-SRC = st.c x.c
+SRC = st.c x.c kittygfx.c
 OBJ = $(SRC:.c=.o)
 
 all: st
@@ -16,8 +16,9 @@ config.h:
 	$(CC) $(STCFLAGS) -c $<
 
 # st.o: config.h st.h win.h                                  # st-meta-vim-full
-st.o: config.h st.h win.h normalMode.h normalMode.c utils.h  # st-meta-vim-full
-x.o: arg.h config.h st.h win.h
+st.o: config.h st.h win.h normalMode.h normalMode.c utils.h kittygfx.h  # st-meta-vim-full
+x.o: arg.h config.h st.h win.h kittygfx.h
+kittygfx.o: config.h st.h kittygfx.h
 
 $(OBJ): config.h config.mk
 
@@ -30,7 +31,7 @@ clean:
 dist: clean
 	mkdir -p st-$(VERSION)
 	cp -R FAQ LEGACY TODO LICENSE Makefile README config.mk\
-		config.def.h st.info st.1 arg.h st.h win.h $(SRC)\
+		config.def.h st.info st.1 arg.h st.h win.h kittygfx.h $(SRC)\
 		st-$(VERSION)
 	tar -cf - st-$(VERSION) | gzip > st-$(VERSION).tar.gz
 	rm -rf st-$(VERSION)

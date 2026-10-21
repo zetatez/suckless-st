@@ -98,8 +98,8 @@ unsigned int tabspaces = 4;
 // float alpha = 1, alphaUnfocused = 1;
 
 // float alpha = 0.88, alphaUnfocused = 0.78;
-float alpha = 0.82, alphaUnfocused = 0.618;
-// float alpha = 0.16, alphaUnfocused = 0.08;
+// float alpha = 0.82, alphaUnfocused = 0.618;
+float alpha = 0.16, alphaUnfocused = 0.08;
 
 static const char *colorname[] = {
   /* 0-7 8 normal colors */

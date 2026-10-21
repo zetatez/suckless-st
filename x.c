@@ -19,6 +19,7 @@ char *argv0;
 #include "arg.h"
 #include "st.h"
 #include "win.h"
+#include "kittygfx.h"
 #include "normalMode.h"                                                                    // st-meta-vim-full
 
 /* types used in config.h */
@@ -170,6 +171,8 @@ static void expose(XEvent *);
 static void visibility(XEvent *);
 static void unmap(XEvent *);
 static void kpress(XEvent *);
+static int kittykey(XKeyEvent *, KeySym, char *, size_t);
+static int kittymods(uint);
 static void cmessage(XEvent *);
 static void resize(XEvent *);
 static void focus(XEvent *);
@@ -790,6 +793,7 @@ xresize(int col, int row)
 {
 	win.tw = col * win.cw;
 	win.th = row * win.ch;
+	gfx_set_cell(win.cw, win.ch);
 
 	XFreePixmap(xw.dpy, xw.buf);
 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,
@@ -1307,6 +1311,7 @@ xinit(int cols, int rows)
 			PropModeReplace, (uchar *)&thispid, 1);
 
 	win.mode = MODE_NUMLOCK;
+	gfx_set_cell(win.cw, win.ch);
 	resettitle();
 	xhints();
 	XMapWindow(xw.dpy, xw.win);
@@ -1345,6 +1350,13 @@ xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len, int x
 		historyOverlay(x+i, y, &g);                                                        // st-meta-vim-full
 		rune = g.u;                                                                        // st-meta-vim-full
 		mode = g.mode;                                                                     // st-meta-vim-full
+
+		/* Unicode placeholders are composited as images after the text
+		 * pass; draw a blank cell here so the background is clean. */
+		if (mode & ATTR_IMAGE) {
+			rune = ' ';
+			mode &= ~ATTR_IMAGE;
+		}
 
 		/* Skip dummy wide-character spacing. */
 		if (mode == ATTR_WDUMMY)
@@ -1466,6 +1478,13 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	Color *fg, *bg, *temp, revfg, revbg, truefg, truebg;
 	XRenderColor colfg, colbg;
 	XRectangle r;
+
+	/* Placeholder cells carry the image id in their foreground colour;
+	 * the image itself is drawn by gfx_draw_line_placeholders. */
+	if (base.mode & ATTR_IMAGE) {
+		base.mode &= ~ATTR_IMAGE;
+		base.fg = defaultfg;
+	}
 
 	/* Fallback on color display for attributes not supported by the font */
 	if (base.mode & ATTR_ITALIC && base.mode & ATTR_BOLD) {
@@ -1618,6 +1637,8 @@ xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
 	/*
 	 * Select the right color for the right mode.
 	 */
+	if (g.mode & ATTR_IMAGE)
+		g.u = ' ';
 	g.mode &= ATTR_BOLD|ATTR_ITALIC|ATTR_UNDERLINE|ATTR_STRUCK|ATTR_WIDE;
 
 	if (IS_SET(MODE_REVERSE)) {
@@ -1770,8 +1791,38 @@ xdrawline(Line line, int x1, int y1, int x2)
 }
 
 void
+xdrawimages_line(Line line, int y, int x1, int x2)
+{
+	gfx_draw_line_placeholders(xw.dpy, xw.buf, xw.vis, xw.depth,
+	                           win.cw, win.ch, borderpx, win.w, win.h,
+	                           dc.col[defaultbg].color.red,
+	                           dc.col[defaultbg].color.green,
+	                           dc.col[defaultbg].color.blue,
+	                           line, y, x1, x2, -1);
+}
+
+/* Restore the image fragment of a single placeholder cell, e.g. after the
+ * cursor has been drawn over it. Scanning starts at the beginning of the line
+ * so continuation cells inherit the row/column of their row. */
+void
+xdrawimages_cell(Line line, int y, int x, int x1, int x2)
+{
+	gfx_draw_line_placeholders(xw.dpy, xw.buf, xw.vis, xw.depth,
+	                           win.cw, win.ch, borderpx, win.w, win.h,
+	                           dc.col[defaultbg].color.red,
+	                           dc.col[defaultbg].color.green,
+	                           dc.col[defaultbg].color.blue,
+	                           line, y, x1, x2, x);
+}
+
+void
 xfinishdraw(void)
 {
+	gfx_draw(xw.dpy, xw.buf, xw.vis, xw.depth, win.cw, win.ch,
+	         borderpx, win.w, win.h,
+	         dc.col[defaultbg].color.red,
+	         dc.col[defaultbg].color.green,
+	         dc.col[defaultbg].color.blue);
 	XCopyArea(xw.dpy, xw.buf, xw.win, dc.gc, 0, 0, win.w,
 			win.h, 0, 0);
 	XSetForeground(xw.dpy, dc.gc,
@@ -1932,13 +1983,69 @@ kmap(KeySym k, uint state)
 	return NULL;
 }
 
+static int
+kittymods(uint state)
+{
+	int mods = 0;
+
+	if (state & ShiftMask)
+		mods |= 1;
+	if (state & Mod1Mask)
+		mods |= 2;
+	if (state & ControlMask)
+		mods |= 4;
+	if (state & Mod4Mask)
+		mods |= 8;
+	return mods + 1;
+}
+
+/*
+ * Encode a key event using the kitty keyboard protocol CSI u form.
+ * Only the disambiguate enhancement is implemented: Esc and combinations
+ * involving Ctrl/Alt/Super use CSI u, while plain text and the special
+ * Enter/Tab/Backspace keys keep their legacy bytes as required.
+ */
+static int
+kittykey(XKeyEvent *e, KeySym ksym, char *buf, size_t buflen)
+{
+	KeySym base;
+	int mods, n;
+
+	if (!(ttykittyflags() & KITTY_FLAG_DISAMBIGUATE))
+		return 0;
+
+	if (ksym == XK_Escape) {
+		n = snprintf(buf, buflen, "\033[27;%du", kittymods(e->state));
+		return n > 0 && (size_t)n < buflen ? n : 0;
+	}
+
+	if (!(e->state & (ControlMask | Mod1Mask | Mod4Mask)))
+		return 0;
+
+	if (ksym == XK_Return || ksym == XK_KP_Enter || ksym == XK_Tab ||
+	    ksym == XK_ISO_Left_Tab || ksym == XK_BackSpace)
+		return 0;
+
+	base = XkbKeycodeToKeysym(xw.dpy, e->keycode, 0, 0);
+	if (base == NoSymbol)
+		base = ksym;
+	if (base >= XK_A && base <= XK_Z)
+		base += 'a' - XK_A;
+	if (base < 0x20 || base > 0x7e)
+		return 0;
+
+	mods = kittymods(e->state);
+	n = snprintf(buf, buflen, "\033[%lu;%du", (unsigned long)base, mods);
+	return n > 0 && (size_t)n < buflen ? n : 0;
+}
+
 void
 kpress(XEvent *ev)
 {
 	XKeyEvent *e = &ev->xkey;
 	KeySym ksym = NoSymbol;
 	char buf[64], *customkey;
-	int len;
+	int len, klen;
 	Rune c;
 	Status status;
 	Shortcut *bp;
@@ -1966,13 +2073,19 @@ kpress(XEvent *ev)
 		}
 	}
 
-	/* 2. custom keys from config.h */
+	/* 2. kitty keyboard protocol (when requested by the application) */
+	if ((klen = kittykey(e, ksym, buf, sizeof buf)) > 0) {
+		ttywrite(buf, klen, 1);
+		return;
+	}
+
+	/* 3. custom keys from config.h */
 	if ((customkey = kmap(ksym, e->state))) {
 		ttywrite(customkey, strlen(customkey), 1);
 		return;
 	}
 
-	/* 3. composed string from input method */
+	/* 4. composed string from input method */
 	if (len == 0)
 		return;
 	if (len == 1 && e->state & Mod1Mask) {
